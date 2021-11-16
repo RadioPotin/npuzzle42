@@ -1,0 +1,5 @@
+(test
+ (name test_npuzzle)
+ (deps
+  (source_tree test_machines))
+ (libraries npuzzle))
