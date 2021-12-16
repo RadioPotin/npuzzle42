@@ -1,5 +1,5 @@
 (test
  (name test_npuzzle)
  (deps
-  (source_tree test_machines))
+  (source_tree ../puzzles))
  (libraries npuzzle))

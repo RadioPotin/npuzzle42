@@ -1,11 +1,17 @@
 (library
  (public_name npuzzle)
- (modules)
- (libraries cmdliner )
+ (modules ast lexer parser parray)
+ (libraries cmdliner)
  (instrumentation
   (backend bisect_ppx)))
 
 (executable
- (public_name main)
- (modules main)
- (libraries cmdliner npuzzle))
+ (public_name npuzzle)
+ (modules npuzzle)
+ (libraries npuzzle))
+
+(ocamllex
+ (modules lexer))
+
+(menhir
+ (modules parser))
