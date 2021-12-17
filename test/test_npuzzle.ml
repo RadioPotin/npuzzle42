@@ -1,2 +1,1 @@
-let () =
-  Format.printf "TEST HERE SOON@."
+let () = Format.printf "TEST HERE SOON@."

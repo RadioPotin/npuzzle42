@@ -3,31 +3,32 @@
 %token<string> COM
 %token EOF
 
-
 %start <Ast.npuzzle> npuzzle
 
 %%
+
 let comment :=
     | comment = COM ;
   { comment }
 
 let size :=
-    | n = INT ; {(n, None)}
-    | n = INT ; com = comment ; {(n, Some com)}
+    | n = INT ; option(comment);
+  { n }
 
 let tile :=
-    | value = INT ; {value}
+    | n = INT; option(comment);
+  { n }
 
 let tiles :=
-    | values = list(tile); {values}
-
-let rows :=
-    | values = tiles; {values}
+    | {[]}
+  | n = tile ; ~ = tiles ;
+  { n::tiles }
 
 let puzzle :=
-    |r = rows; com = comment; {r, Some com}
-    | r = rows; {r, None}
+  | ~ = tiles ; {[tiles]}
 
 let npuzzle :=
-    | header = option(list(comment)); n = size; p = puzzle; footer = option(list(comment)); EOF;
-  { header, n, [p], footer }
+    |  ~ = size; ~ = puzzle; EOF;
+  { size, puzzle }
+    | option(list(comment)); ~ = size; ~ = puzzle; option(list(comment)); EOF;
+  { size, puzzle }

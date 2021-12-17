@@ -4,7 +4,7 @@ open Parser
 
 let linebreak = ['\n' '\r']
 let whitespace = [' ' '\t']
-let com_id = ['#'] [' ' '\t' '0'-'9' '#' 'a'-'z' 'A'-'Z' '?']+
+let com_id = ['#'] [' ' '\t']? [' ' '\t' '0'-'9' '#' 'a'-'z' 'A'-'Z' '?']+
 let int_id = ['-']? ['0'-'9']+
 
 
