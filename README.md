@@ -1,5 +1,7 @@
 # Npuzzle [![Actions Status](https://github.com/RadioPotin/npuzzle42/workflows/build/badge.svg)](https://github.com/RadioPotin/npuzzle42/actions) [![coverage percentage](https://raw.githubusercontent.com/RadioPotin/npuzzle42/gh-pages/coverage/badge.svg)](https://RadioPotin.github.io/npuzzle42/coverage/)
 
+[Subject PDF File](https://linx.zapashcanon.fr/8i0usstm.pdf)
+
 # Building
 ```
 dune build @all
