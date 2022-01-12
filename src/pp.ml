@@ -2,20 +2,6 @@
 let file fmt puzzle_file =
   Format.fprintf fmt "FILE:----@.%s@.----------@." puzzle_file
 
-let maparray fmt (map:int Parray.t Parray.t) =
- Parray.iter
-   ( fun int_arr ->
-     let len = Parray.length int_arr in
-     if len > 0 then
-       begin
-       Format.pp_print_int fmt (Parray.get int_arr 0);
-       for i = 1 to len - 1 do
-         Format.fprintf fmt "-";
-         Format.pp_print_int fmt (Parray.get int_arr i)
-       done
-               end
-     ) map
-
 let pp_puzzle fmt puzzle =
   Format.fprintf fmt "%a"
     (Format.pp_print_list
@@ -30,4 +16,6 @@ let pp_puzzle fmt puzzle =
     ) puzzle
 
 let map fmt (size, puzzle) =
+  let l = Immut_array.map Immut_array.to_list puzzle in
+  let puzzle = Immut_array.to_list l in
   Format.fprintf fmt "< %d >@.%a@." size pp_puzzle puzzle

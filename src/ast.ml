@@ -2,12 +2,6 @@ exception Syntax_error of string
 
 exception Format_error of string
 
-type size = int
+type t = int Immut_array.t Immut_array.t
 
-type tile = int
-
-type tiles = tile list
-
-type puzzle = tiles list
-
-type npuzzle = size * puzzle
+type npuzzle = int * t

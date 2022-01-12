@@ -1,6 +1,6 @@
 (library
  (public_name npuzzle)
- (modules ast lexer parser parray pp)
+ (modules ast immut_array pp generate )
  (libraries cmdliner)
  (instrumentation
   (backend bisect_ppx)))
@@ -9,9 +9,3 @@
  (public_name npuzzle)
  (modules npuzzle)
  (libraries npuzzle))
-
-(ocamllex
- (modules lexer))
-
-(menhir
- (modules parser))

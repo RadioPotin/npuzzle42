@@ -28,7 +28,7 @@ let read_puzzle_file filename =
     close_in chan;
     List.rev !lines
 
-let maker s =
+let maker s : int * Ast.t=
   let lines = String.split_on_char '\n' s in
   let lines =
     List.fold_left
@@ -61,18 +61,19 @@ let maker s =
     | [] -> failwith "empty"
     | size :: lines -> (List.hd size, lines)
   in
-  (size, lines)
+  assert(List.length lines = size);
+  assert(List.for_all (fun line -> List.length line = size) lines);
+  (size, Immut_array.of_list (List.map Immut_array.of_list lines))
 
-let main input =
+let main = function
+  | "" -> Format.printf "GENERATING NEW MAP@.";
+  let map = Generate.gen () in Pp.map Format.std_formatter map
+  | input ->
+
   let fmt = Format.std_formatter in
   let puzzle_file = String.concat "\n" (read_puzzle_file input) in
-  let puzzle_buf = Lexing.from_string puzzle_file in
   try
-    let ((_size, _puzzle) as map) =
-      Parser.npuzzle Lexer.token puzzle_buf
-    in
     Pp.file fmt puzzle_file;
-    Pp.map fmt map;
     let map =
       maker puzzle_file
     in Pp.map fmt map
@@ -83,9 +84,6 @@ let main input =
     exit 1
   | Ast.Format_error s ->
     Format.eprintf "ERROR: %s@." s;
-    exit 1
-  | Parser.Error ->
-    Format.eprintf "PARSER ERROR";
     exit 1
 
 let npuzzle = Term.(const main $ input)
