@@ -2,12 +2,15 @@
 
 (* TODO: transient API? for batch modifications *)
 
-(*$inject let print_array f a = to_list a |> Array.of_list |> Q.Print.(array f)
+(*$
+  inject
+
+  let print_array f a = to_list a |> Array.of_list |> Q.Print.(array f)
 *)
 
 type 'a t = 'a array
 
-let empty = [| |]
+let empty = [||]
 
 let length = Array.length
 
@@ -31,7 +34,8 @@ let set a n x =
   (of_list [1; 3; 4; 5]) (set (of_list [1; 2; 4; 5]) 1 3)
 *)
 
-let sub = Array.sub (* Would this not be better implemented with CCArray_slice *)
+let sub = Array.sub
+(* Would this not be better implemented with CCArray_slice *)
 
 let map = Array.map
 
@@ -39,8 +43,13 @@ let mapi = Array.mapi
 
 let append a b =
   let na = length a in
-  Array.init (na + length b)
-    (fun i -> if i < na then a.(i) else b.(i-na))
+  Array.init
+    (na + length b)
+    (fun i ->
+      if i < na then
+        a.(i)
+      else
+        b.(i - na) )
 
 (*$= append & ~printer:(print_array Q.Print.int)
   empty (append empty empty)
@@ -59,9 +68,9 @@ let foldi f acc a =
   let n = ref 0 in
   Array.fold_left
     (fun acc x ->
-       let acc = f acc !n x in
-       incr n;
-       acc)
+      let acc = f acc !n x in
+      incr n;
+      acc )
     acc a
 
 (*$= foldi & ~printer:Q.Print.(list (pair int string))
@@ -74,7 +83,8 @@ let for_all p a =
   try
     Array.iter (fun x -> if not (p x) then raise ExitNow) a;
     true
-  with ExitNow -> false
+  with
+  | ExitNow -> false
 
 (*$= for_all & ~printer:Q.Print.bool
   true (for_all (fun _ -> false) empty)
@@ -87,7 +97,8 @@ let exists p a =
   try
     Array.iter (fun x -> if p x then raise ExitNow) a;
     false
-  with ExitNow -> true
+  with
+  | ExitNow -> true
 
 (*$= exists & ~printer:Q.Print.bool
   false (exists (fun _ -> true) empty)
@@ -103,13 +114,14 @@ let exists p a =
 *)
 
 (*$Q
- Q.(list bool) (fun l -> exists (fun b -> b) (of_list l) = List.fold_left (||) false l)
- Q.(list bool) (fun l -> for_all (fun b -> b) (of_list l) = List.fold_left (&&) true l)
- *)
+  Q.(list bool) (fun l -> exists (fun b -> b) (of_list l) = List.fold_left (||) false l)
+  Q.(list bool) (fun l -> for_all (fun b -> b) (of_list l) = List.fold_left (&&) true l)
+*)
 
 (** {2 Conversions} *)
 
 type 'a iter = ('a -> unit) -> unit
+
 type 'a gen = unit -> 'a option
 
 let of_list = Array.of_list
@@ -131,9 +143,10 @@ let of_iter s =
     of_iter g |> to_iter |> Iter.to_list = l)
 *)
 
-let rec gen_to_list_ acc g = match g() with
+let rec gen_to_list_ acc g =
+  match g () with
   | None -> List.rev acc
-  | Some x -> gen_to_list_ (x::acc) g
+  | Some x -> gen_to_list_ (x :: acc) g
 
 let of_gen g =
   let l = gen_to_list_ [] g in
@@ -146,7 +159,8 @@ let to_gen a =
       let x = a.(!i) in
       incr i;
       Some x
-    ) else None
+    ) else
+      None
 
 (*$Q
   Q.(list int) (fun l -> \
@@ -158,8 +172,8 @@ let to_gen a =
 
 type 'a printer = Format.formatter -> 'a -> unit
 
-let pp ?(pp_start=fun _ () -> ()) ?(pp_stop=fun _ () -> ())
-    ?(pp_sep=fun out () -> Format.fprintf out ",@ ") pp_item out a =
+let pp ?(pp_start = fun _ () -> ()) ?(pp_stop = fun _ () -> ())
+    ?(pp_sep = fun out () -> Format.fprintf out ",@ ") pp_item out a =
   pp_start out ();
   for k = 0 to Array.length a - 1 do
     if k > 0 then pp_sep out ();

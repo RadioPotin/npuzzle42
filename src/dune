@@ -1,6 +1,6 @@
 (library
  (public_name npuzzle)
- (modules ast immut_array pp generate )
+ (modules types utils immut_array pp generate)
  (libraries cmdliner)
  (instrumentation
   (backend bisect_ppx)))

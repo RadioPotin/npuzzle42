@@ -28,7 +28,7 @@ let read_puzzle_file filename =
     close_in chan;
     List.rev !lines
 
-let maker s : int * Ast.t=
+let maker s : int * Types.t =
   let lines = String.split_on_char '\n' s in
   let lines =
     List.fold_left
@@ -47,12 +47,10 @@ let maker s : int * Ast.t=
       [] lines
   in
   let lines = List.rev lines in
-  List.iter (fun line -> Format.printf "line = `%s`@." line) lines;
   let lines =
     List.map
       (fun line ->
         let words = String.split_on_char ' ' (String.trim line) in
-        List.iter (fun w -> Format.printf "word = `%s`@." w) words;
         List.map int_of_string words )
       lines
   in
@@ -61,30 +59,40 @@ let maker s : int * Ast.t=
     | [] -> failwith "empty"
     | size :: lines -> (List.hd size, lines)
   in
-  assert(List.length lines = size);
-  assert(List.for_all (fun line -> List.length line = size) lines);
+  assert (List.length lines = size);
+  assert (List.for_all (fun line -> List.length line = size) lines);
+  (* TODO check redundance in values*)
   (size, Immut_array.of_list (List.map Immut_array.of_list lines))
 
-let main = function
-  | "" -> Format.printf "GENERATING NEW MAP@.";
-  let map = Generate.gen () in Pp.map Format.std_formatter map
-  | input ->
+let verify_solvability fmt puzzle =
+  if Utils.is_solvable puzzle then
+    Format.fprintf fmt "SOLVE IT@."
+  else
+    Format.fprintf fmt "UNSOLVABLE@."
 
+let main input =
   let fmt = Format.std_formatter in
-  let puzzle_file = String.concat "\n" (read_puzzle_file input) in
-  try
-    Pp.file fmt puzzle_file;
-    let map =
-      maker puzzle_file
-    in Pp.map fmt map
+  match input with
+  | "" ->
+    Format.printf "GENERATING NEW MAP@.";
+    let map = Generate.gen () in
+    Pp.map Format.std_formatter map;
+    verify_solvability fmt map
+  | input -> (
+    let puzzle_file = String.concat "\n" (read_puzzle_file input) in
 
-  with
-  | Ast.Syntax_error s ->
-    Format.eprintf "ERROR: %s@." s;
-    exit 1
-  | Ast.Format_error s ->
-    Format.eprintf "ERROR: %s@." s;
-    exit 1
+    try
+      Pp.file fmt puzzle_file;
+      let map = maker puzzle_file in
+      Pp.map fmt map;
+      verify_solvability fmt map
+    with
+    | Types.Syntax_error s ->
+      Format.eprintf "ERROR: %s@." s;
+      exit 1
+    | Types.Format_error s ->
+      Format.eprintf "ERROR: %s@." s;
+      exit 1 )
 
 let npuzzle = Term.(const main $ input)
 

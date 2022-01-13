@@ -1,7 +1,6 @@
-
 let () = Random.self_init ()
 
-let size = Random.int 3
+let size = Random.int 4
 
 let gen () =
   let tbl = Hashtbl.create 124 in
@@ -9,9 +8,11 @@ let gen () =
     let i = Random.int (size * size) in
     if Hashtbl.mem tbl i then
       aux ()
-    else
-      begin
-        Hashtbl.add tbl i (); i
-      end
+    else begin
+      Hashtbl.add tbl i ();
+      i
+    end
   in
-    (size, Immut_array.init size (fun _i -> Immut_array.init size (fun _i -> aux ())))
+  ( size
+  , Immut_array.init size (fun _i -> Immut_array.init size (fun _i -> aux ()))
+  )
