@@ -7,8 +7,8 @@ let rec size () =
     size ()
   | n -> n
 
-let gen () =
-  let tbl = Hashtbl.create 124 in
+let rec gen () =
+  let tbl = Hashtbl.create 64 in
   let size = size () in
   let rec aux () =
     let i = Random.int (size * size) in
@@ -19,6 +19,9 @@ let gen () =
       i
     end
   in
-  ( size
-  , Immut_array.init size (fun _i -> Immut_array.init size (fun _i -> aux ()))
-  )
+  let map = size , Immut_array.init size (fun _i -> Immut_array.init size (fun _i -> aux ()))
+  in
+  if Utils.is_solvable map then
+    map
+  else
+    gen ()
