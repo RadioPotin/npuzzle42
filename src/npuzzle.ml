@@ -65,7 +65,7 @@ let maker s : int * Types.t =
   (size, Immut_array.of_list (List.map Immut_array.of_list lines))
 
 let verify_solvability fmt puzzle =
-  if Utils.is_solvable puzzle then
+  if Utils.is_solvable fmt puzzle then
     Format.fprintf fmt "SOLVE IT@."
   else
     Format.fprintf fmt "UNSOLVABLE@."
