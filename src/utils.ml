@@ -1,19 +1,32 @@
 let map_to_lists puzzle =
   Immut_array.map Immut_array.to_list puzzle |> Immut_array.to_list
 
+let map_of_lists puzzle =
+  Immut_array.of_list (List.map Immut_array.of_list puzzle)
+
+(** [no_duplicate_values lines] verifies that there are no duplicated tile in
+    the puzzle *)
 let no_duplicate_values lines =
   let tbl = Hashtbl.create 64 in
-  List.for_all (fun line ->
-    List.for_all (fun v ->
-      if Hashtbl.mem tbl v then (
-        false
-      ) else (
-        Hashtbl.add tbl v (); true
-      )
-    ) line
-  ) lines
+  List.for_all
+    (fun line ->
+      List.for_all
+        (fun v ->
+          if Hashtbl.mem tbl v then
+            false
+          else (
+            Hashtbl.add tbl v ();
+            true
+          ) )
+        line )
+    lines
 
-let map_maker s : int * Types.t =
+let has_blank_char lines =
+  List.exists (List.exists (fun v -> v = 0)) lines
+
+(** [map_maker s] reads the maps from [s], splits it and recovers the puzzle
+    while making some sanity assertions on the nature of the puzzle *)
+let map_maker s : Types.npuzzle =
   let lines = String.split_on_char '\n' s in
   let lines =
     List.fold_left
@@ -47,8 +60,12 @@ let map_maker s : int * Types.t =
   assert (List.length lines = size);
   assert (List.for_all (fun line -> List.length line = size) lines);
   assert (no_duplicate_values lines);
-  (size, Immut_array.of_list (List.map Immut_array.of_list lines))
+  assert (has_blank_char lines);
+  (size, map_of_lists lines )
 
+(** [get_inversions values] returns a tuple (inversions:int list *
+    inversions_nb:int). this is used when figuring out the solvability of the
+    puzzle *)
 let get_inversions values =
   let rec map_inversions acc = function
     | [] -> List.rev acc
@@ -67,13 +84,13 @@ let get_inversions values =
   let inversions_count = List.fold_left ( + ) 0 in
   let inversions = map_inversions [] (List.flatten values) in
   let inversions_nb = inversions_count inversions in
-  inversions, inversions_nb
+  (inversions, inversions_nb)
 
+(** [is_solvable (size, puzzle)] boolean function used to establish solvability
+    of the map, be it read from a file, or the automatically generated one *)
 let is_solvable (size, puzzle) =
-
   let is_even nb = nb mod 2 = 0 in
 
-  (* Functions used for solvability decision *)
   let blank_location_from_bottom f map = f @@ List.rev map in
   let is_on_even_row map =
     match
@@ -87,10 +104,10 @@ let is_solvable (size, puzzle) =
   let values = map_to_lists puzzle in
   let _inversions_l, inversions_nb = get_inversions values in
 
-  if size mod 2 <> 0 then (
+  if size mod 2 <> 0 then
     (* if size is odd, then puzzle instance is solvable if number of inversions is even in the input state *)
     inversions_nb mod 2 = 0
-  ) else (
+  else
     (* if size is even, puzzle instance is solvable if :
      * - the blank in on an EVEN row counting from the bottom AND number of inversions is ODD
      *
@@ -99,8 +116,30 @@ let is_solvable (size, puzzle) =
      * - the blank is on an ODD row counting from the bottom AND number of inversions is EVEN
      * source: https://www.geeksforgeeks.org/check-instance-15-puzzle-solvable/
      * *)
-    (blank_location_from_bottom is_on_even_row values
-     && (not @@ is_even inversions_nb))
+    blank_location_from_bottom is_on_even_row values
+    && (not @@ is_even inversions_nb)
     || (not @@ blank_location_from_bottom is_on_even_row values)
        && is_even inversions_nb
-  )
+
+
+(** [reconstruct acc n list] builds a ['a list list] out of a ['a list],
+ where there are [n] elements and each element is a list of length of [n].
+It's used for different conversions *)
+let rec reconstruct acc n = function
+  | [] -> List.rev acc
+  | l ->
+    let rec aux_acc_n acc_el = function
+      | [] -> List.rev acc_el, []
+      | x :: r as l ->
+        if List.length acc_el = n then
+          List.rev acc_el, l
+        else
+          aux_acc_n (x::acc_el) r
+    in
+    match aux_acc_n [] l with
+    | [], [] -> assert false
+    | row, r -> reconstruct (row::acc) n r
+
+let remove_blank tile_list =
+  let open Types in
+  List.filter (fun state -> state.value <> 0) tile_list

@@ -16,13 +16,15 @@ let pp_puzzle fmt puzzle =
 let display_inversions fmt inversions_l nb =
   Format.fprintf fmt "INVERSIONS:@.%a@."
     (Format.pp_print_list
-       ~pp_sep:(fun fmt () -> Format.fprintf fmt "-")
-       (fun fmt i -> Format.fprintf fmt "%d" i) )
+      ~pp_sep:(fun fmt () -> Format.fprintf fmt "@.")
+      (Format.pp_print_list
+        ~pp_sep:(fun fmt () -> Format.fprintf fmt "-")
+        (fun fmt i -> Format.fprintf fmt "%d" i) ))
     inversions_l;
-  Format.printf "Nb of inversions in initial grid is: %d@." nb
+  Format.printf "Nb of inversions in grid is: %d@." nb
 
 let map fmt (size, puzzle) =
   let puzzle = Utils.map_to_lists puzzle in
   Format.fprintf fmt "< %d >@.%a@." size pp_puzzle puzzle;
   let inversion_l, nb = Utils.get_inversions puzzle in
-  display_inversions fmt inversion_l nb
+  display_inversions fmt (Utils.reconstruct [] size inversion_l) nb

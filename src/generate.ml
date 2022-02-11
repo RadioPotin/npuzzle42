@@ -1,7 +1,7 @@
 let () = Random.self_init ()
 
 let rec size () =
-  match Random.int 4 with
+  match Random.int 6 with
   | 0
   | 1 ->
     size ()
@@ -19,9 +19,22 @@ let rec gen () =
       i
     end
   in
-  let map = size , Immut_array.init size (fun _i -> Immut_array.init size (fun _i -> aux ()))
+  let map =
+    ( size
+    , Immut_array.init size (fun _i -> Immut_array.init size (fun _i -> aux ()))
+    )
   in
   if Utils.is_solvable map then
     map
   else
     gen ()
+
+let goal (size, map) =
+  let mapl =
+    Utils.map_to_lists map
+  in
+  let mapl = List.flatten mapl
+  in
+  List.sort Int.compare mapl
+  |> Utils.reconstruct [] size
+  |> Utils.map_of_lists
