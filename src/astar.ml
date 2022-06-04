@@ -1,87 +1,94 @@
-open Types
-
 module Movement = struct
+  let move_left (x, y) _max_x =
+    if x = 0 then
+      None
+    else
+      Some (x - 1, y)
 
-let move_left (x, y) _max_index =
-  if x = 0 then None else Some (x - 1, y)
+  let move_right (x, y) max_x =
+    if x = max_x - 1 then
+      None
+    else
+      Some (x + 1, y)
 
-let move_right (x, y) max_index =
-  if x = max_index then None else Some (x + 1, y)
+  let move_up (x, y) _max_y =
+    if y = 0 then
+      None
+    else
+      Some (x, y - 1)
 
-let move_up (x, y) _max_index =
-  if y = 0 then None else Some (x, y - 1)
+  let move_down (x, y) max_y =
+    if y = max_y - 1 then
+      None
+    else
+      Some (x, y + 1)
 
-let move_down (x, y) max_index =
-  if y = max_index then None else Some (x, y + 1)
-
-let movements = [move_up; move_down; move_left; move_right]
-
+  let movements = [ move_up; move_down; move_left; move_right ]
 end
 
-(** [map_tiles puzzle] turns the [int Immut_array.t Immut_array.t] puzzle representation into a [Types.tile list] allowing*)
-let map_tiles puzzle =
-  let t_arr =
-    Immut_array.mapi
-      (fun y row ->
-          Immut_array.mapi
-            (fun x v -> {value = v; pos = x, y})
-            row)
-      puzzle
-  in
-  Immut_array.map Immut_array.to_list t_arr
-  |> Immut_array.to_list
-  |> List.flatten
+let matrix_get p x y =
+  let line = Immut_array.get p y in
+  Immut_array.get line x
 
-let pop l = List.hd l
+let matrix_set p x y v =
+  let line = Immut_array.get p y in
+  let line = Immut_array.set line x v in
+  Immut_array.set p y line
 
-let get_children state =
-  let blank_tile =
-    List.hd @@ List.filter
-      (fun tile -> tile.value = 0)
-      state.tiles
-  in
-  let movements =
-    List.map (fun f -> f blank_tile.pos (state.size - 1)) Movement.movements
-  in
+let permut p (x1, y1) (x2, y2) =
+  let v1 = matrix_get p x1 y1 in
+  let v2 = matrix_get p x2 y2 in
+  let p = matrix_set p x2 y2 v1 in
+  matrix_set p x1 y1 v2
+
+let get_blank puzzle =
+  let pos = ref None in
+  Immut_array.iteri
+    (fun j line ->
+      Immut_array.iteri
+        (fun i value -> if value = 0 then pos := Some (i, j))
+        line )
+    puzzle;
+  match !pos with
+  | None -> assert false
+  | Some pos -> pos
+
+let get_children size state =
+  let pos = get_blank state in
   let possible_movements =
-    List.filter Option.is_none movements
-  in possible_movements
-    (* WIP
-     *
-     * apply list of possible movements to current state to get puzzle of children
-     * then convert to puzzles to state types
-     * Run heuristic, order by cost
-     * return children
-     * *)
+    List.filter_map (fun f -> f pos size) Movement.movements
+  in
+  let change_current_state_with given_movement =
+    let state = permut state pos given_movement in
+    state
+  in
+  List.map change_current_state_with possible_movements
 
-let expand state _hfunc =
-  let _children = get_children state in
-  ()
-  (* WIP
-   * Get children,
-   * close current state
-   * add children to priority cue, IE, openedstates cue
-   * *)
+let solved = ref false
 
-let astar hfunc initial_state =
-  if initial_state.h_cost = 0 then
-    [initial_state]
-  else
-    let state = initial_state in
-    let _opened = expand state hfunc in
-    []
+let rec solve_brutforce seen_states size goal state =
+  if Hashtbl.mem seen_states state then
+    ()
+  else begin
+    Hashtbl.add seen_states state ();
+    ( if state = goal then (
+      solved := true;
+      Format.printf "YES HAPPY ME:@\n%a@\n" Pp.map state
+    ) else
+      let children = get_children size state in
+      List.iter
+        (fun child ->
+          if not !solved then solve_brutforce seen_states size goal child )
+        children );
+    if !solved then Format.printf "%a@\n@\n" Pp.map state
+  end
 
-let solve_with heuristic_f ((size, puzzle) as map)=
-  let goal = Generate.goal map in
-  let goal = map_tiles goal in
-  let tiles = map_tiles puzzle in
-  let heuristic_f = heuristic_f goal in
-  let initial_state =
-    {
-      puzzle;
-      size;
-      tiles;
-      g_cost = 0;
-      h_cost = heuristic_f tiles;
-    }
-  in astar heuristic_f initial_state
+let astar seen_states size state goal _hfunc =
+  let _children = get_children size state in
+  solve_brutforce seen_states size goal state
+
+let solve_with heuristic_f size state =
+  let seen_states = Hashtbl.create 512 in
+  let goal = Generate.goal size in
+  let hfunc = heuristic_f size in
+  astar seen_states size state goal hfunc

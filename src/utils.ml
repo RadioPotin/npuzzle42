@@ -105,7 +105,7 @@ let is_solvable (size, puzzle) =
   let _inversions_l, inversions_nb = get_inversions values in
 
   if size mod 2 <> 0 then
-    (* if size is odd, then puzzle instance is solvable if number of inversions is even in the input state *)
+    (* if size is odd and the number of inversions is even in the input state, then puzzle instance is solvable if*)
     inversions_nb mod 2 = 0
   else
     (* if size is even, puzzle instance is solvable if :
@@ -120,26 +120,3 @@ let is_solvable (size, puzzle) =
     && (not @@ is_even inversions_nb)
     || (not @@ blank_location_from_bottom is_on_even_row values)
        && is_even inversions_nb
-
-
-(** [reconstruct acc n list] builds a ['a list list] out of a ['a list],
- where there are [n] elements and each element is a list of length of [n].
-It's used for different conversions *)
-let rec reconstruct acc n = function
-  | [] -> List.rev acc
-  | l ->
-    let rec aux_acc_n acc_el = function
-      | [] -> List.rev acc_el, []
-      | x :: r as l ->
-        if List.length acc_el = n then
-          List.rev acc_el, l
-        else
-          aux_acc_n (x::acc_el) r
-    in
-    match aux_acc_n [] l with
-    | [], [] -> assert false
-    | row, r -> reconstruct (row::acc) n r
-
-let remove_blank tile_list =
-  let open Types in
-  List.filter (fun state -> state.value <> 0) tile_list

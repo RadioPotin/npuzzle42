@@ -23,8 +23,21 @@ let display_inversions fmt inversions_l nb =
     inversions_l;
   Format.printf "Nb of inversions in grid is: %d@." nb
 
-let map fmt (size, puzzle) =
-  let puzzle = Utils.map_to_lists puzzle in
-  Format.fprintf fmt "< %d >@.%a@." size pp_puzzle puzzle;
-  let inversion_l, nb = Utils.get_inversions puzzle in
-  display_inversions fmt (Utils.reconstruct [] size inversion_l) nb
+let pp_print_array ?(pp_sep = Format.pp_print_cut) pp_v ppf a =
+  let len = Immut_array.length a in
+  if len > 0 then begin
+    pp_v ppf (Immut_array.get a 0);
+    for i = 1 to len - 1 do
+      pp_sep ppf ();
+      pp_v ppf (Immut_array.get a i)
+    done
+  end
+
+let pp_line fmt line =
+    pp_print_array ~pp_sep:(fun fmt () -> Format.fprintf fmt " - ")
+    Format.pp_print_int fmt line
+
+
+let map fmt puzzle =
+  pp_print_array ~pp_sep:(fun fmt () -> Format.fprintf fmt "@\n")
+    pp_line fmt puzzle

@@ -29,12 +29,8 @@ let rec gen () =
   else
     gen ()
 
-let goal (size, map) =
-  let mapl =
-    Utils.map_to_lists map
-  in
-  let mapl = List.flatten mapl
-  in
-  List.sort Int.compare mapl
-  |> Utils.reconstruct [] size
-  |> Utils.map_of_lists
+let goal size =
+  Immut_array.init size
+      (fun j ->
+        Immut_array.init size
+          (fun i -> i + j * size ))

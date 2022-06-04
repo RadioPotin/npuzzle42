@@ -35,35 +35,35 @@ let read_puzzle_file filename =
 let verify_solvability fmt puzzle =
   if Utils.is_solvable puzzle then
     Format.fprintf fmt "SOLVABLE@."
-  else
-    Format.fprintf fmt "UNSOLVABLE@."
+  else (
+    Format.fprintf fmt "UNSOLVABLE@.";
+    exit 1
+  )
+
+let solve fmt size map =
+  verify_solvability fmt (size, map);
+  Format.fprintf fmt "%a@\nSOLVING@." Pp.map map;
+  ignore @@ Astar.solve_with Heuristics.informed_search size map
 
 (** [main input] entry point to the program, if input is [""] then a valid map
     is automatically generated. Said map cannot exceed the size hardcoded in
     [Generate] module nor can it be equal to 0 or 1 *)
 let main input =
   let fmt = Format.std_formatter in
-
   match input with
   | "" ->
     Format.printf "GENERATING SOLVABLE MAP@.";
-    let (size, _puzzle) as map = Generate.gen ()
-    in
-        Pp.map fmt map;
-      Format.fprintf fmt "-----------------------@.GOAL MAP@.";
-      Pp.map fmt (size, Generate.goal map)
+    let size, puzzle = Generate.gen () in
+    solve fmt size puzzle
+
   | input -> (
     let puzzle_file = String.concat "\n" (read_puzzle_file input) in
 
     try
       Pp.file fmt puzzle_file;
-      let map =
-        Utils.map_maker puzzle_file
+      let size, map = Utils.map_maker puzzle_file
       in
-      verify_solvability fmt map;
-      Pp.map fmt map;
-      Format.fprintf fmt "SOLVING@.";
-      Astar.solve_with Heuristics.informed_search map
+      solve fmt size map
 
     with
     | Types.Syntax_error s ->
