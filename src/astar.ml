@@ -30,7 +30,7 @@ module Movement = struct
   let movements = [ move_up; move_down; move_left; move_right ]
 end
 
-(** [matrix_get p x y] *)
+(** [matrix_get p x y] returns the element of array [p] at coordinates [x] [y]*)
 let matrix_get p x y =
   let line = Immut_array.get p y in
   Immut_array.get line x
@@ -87,29 +87,84 @@ let solved = ref false
 
 (** [solve_brutforce seen_states size goal state] is self explanatory. This
     function Stack Overflows for puzzles of size 4 onward. This function was
-    useful in order to grasp the problem first hand*)
+    useful in order to grasp the problem first hand *)
 let rec solve_brutforce seen_states size goal state =
+  (* Things this function does NOT do:
+   *
+   * keep track of depth
+   * run heuristic on current state
+   * order children by heuristic cost
+   * correctly check g(n) + h(n)
+   *
+   * *)
   if Hashtbl.mem seen_states state then
     ()
   else begin
     Hashtbl.add seen_states state ();
-    ( if state = goal then (
+    ( if state = goal then begin
       solved := true;
-      Format.printf "YES HAPPY ME:@\n%a@\n" Pp.map state
-    ) else
+      Format.printf "The BRUTE is done:@\n%a@\n------@\n" Pp.map state
+    end else
       let children = get_children size state in
       List.iter
         (fun child ->
           if not !solved then solve_brutforce seen_states size goal child )
         children );
-    (* This will print states in reverse order of resolution, since its located after the recursive call *)
+    (* This will print states in reverse order of resolution,
+     * since its located after the recursive call *)
     if !solved then Format.printf "%a@\n@\n" Pp.map state
   end
 
-(* run heuristic on children, order by score, redo*)
-let astar seen_states size state goal _hfunc =
-  let _children = get_children size state in
-  solve_brutforce seen_states size goal state
+(*
+ *
+ * TODO
+ * - Properly handle Hashtbl storing with g value.
+ * - Properly remember chosen states for later PP
+ *
+ * Astar aims at reducing f(n) when f(n) = g(n) + h(n)
+ * n = current node
+ * g = depth
+ * h = heuristic cost estimation
+ *
+ * Meaning that, when choosing next state to expand,
+ * we must remember all nodes visited (with their corresponding depth)
+ * and choose in regards to all we have seen before.
+ *
+ * Storing in the hashtabl ONLY states that we have CHOSEN in our path
+ *
+ * *)
+let astar seen_states size state goal hfunc =
+  let rec expand state g =
+    if Hashtbl.mem seen_states state then
+      ()
+    else begin
+      Hashtbl.add seen_states state ();
+      ( if state = goal then begin
+        solved := true;
+        Format.printf "half assed code say What ?@\n%a@\n------What ?@\n" Pp.map
+          state
+      end else
+        let unfiltered_children = get_children size state in
+        let children =
+          List.sort (fun child1 child2 ->
+              compare (hfunc child1 + g) (hfunc child2 + g) )
+          @@ List.filter_map
+               (fun child ->
+                 if Hashtbl.mem seen_states child then
+                   None
+                 else
+                   Some child )
+               unfiltered_children
+        in
+        List.iter
+          (fun child -> if not !solved then expand child (g + 1))
+          children );
+      (* This will print states in reverse order of resolution,
+       * since its located after the recursive call *)
+      if !solved then Format.printf "%a@\n@\n" Pp.map state
+    end
+  in
+  expand state 0
 
 (** [solve_with heuristic_f size state] main astar solver function. Takes an
     heuristic, size and initial state. *)
