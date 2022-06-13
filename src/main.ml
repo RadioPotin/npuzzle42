@@ -43,7 +43,7 @@ let verify_solvability fmt puzzle =
 let solve fmt size map =
   verify_solvability fmt (size, map);
   Format.fprintf fmt "%a@\nSOLVING@." Pp.map map;
-  ignore @@ Astar.solve_with Heuristics.informed_search size map
+  Astar.solve_with Heuristics.informed_search size map
 
 (** [main input] entry point to the program, if input is [""] then a valid map
     is automatically generated. Said map cannot exceed the size hardcoded in
@@ -55,16 +55,13 @@ let main input =
     Format.printf "GENERATING SOLVABLE MAP@.";
     let size, puzzle = Generate.gen () in
     solve fmt size puzzle
-
   | input -> (
     let puzzle_file = String.concat "\n" (read_puzzle_file input) in
 
     try
       Pp.file fmt puzzle_file;
-      let size, map = Utils.map_maker puzzle_file
-      in
+      let size, map = Utils.map_maker puzzle_file in
       solve fmt size map
-
     with
     | Types.Syntax_error s ->
       Format.eprintf "ERROR: %s@." s;
