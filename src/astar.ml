@@ -85,6 +85,20 @@ let get_children size state =
     valid state at some point in its traversal *)
 let solved = ref false
 
+(** [is_solved current goal] temporary function used to assert if a current
+    state is equivalent to the goal state established early in the program. This
+    function will be modified as the program improves. Its necessity isn't quite
+    proven yet *)
+let is_solved current goal =
+  let flatten = List.flatten in
+  let to_lists = Utils.map_to_lists in
+  let remove_blank state =
+    List.filter (fun tile -> tile <> 0) @@ flatten @@ to_lists state
+  in
+  let goal = remove_blank goal in
+  let current = remove_blank current in
+  goal = current
+
 (** [solve_brutforce seen_states size goal state] is self explanatory. This
     function Stack Overflows for puzzles of size 4 onward. This function was
     useful in order to grasp the problem first hand *)
@@ -101,7 +115,7 @@ let rec solve_brutforce seen_states size goal state =
     ()
   else begin
     Hashtbl.add seen_states state ();
-    ( if state = goal then begin
+    ( if is_solved state goal then begin
       solved := true;
       Format.printf "The BRUTE is done:@\n%a@\n------@\n" Pp.map state
     end else
@@ -116,7 +130,6 @@ let rec solve_brutforce seen_states size goal state =
   end
 
 (*
- *
  * TODO
  * - Properly handle Hashtbl storing with g value.
  * - Properly remember chosen states for later PP
@@ -135,34 +148,24 @@ let rec solve_brutforce seen_states size goal state =
  * *)
 let astar seen_states size state goal hfunc =
   let rec expand state g =
-    if Hashtbl.mem seen_states state then
-      ()
-    else begin
-      Hashtbl.add seen_states state ();
-      ( if state = goal then begin
-        solved := true;
-        Format.printf "half assed code say What ?@\n%a@\n------What ?@\n" Pp.map
-          state
-      end else
-        let unfiltered_children = get_children size state in
-        let children =
-          List.sort (fun child1 child2 ->
-              compare (hfunc child1 + g) (hfunc child2 + g) )
-          @@ List.filter_map
-               (fun child ->
-                 if Hashtbl.mem seen_states child then
-                   None
-                 else
-                   Some child )
-               unfiltered_children
-        in
-        List.iter
-          (fun child -> if not !solved then expand child (g + 1))
-          children );
-      (* This will print states in reverse order of resolution,
-       * since its located after the recursive call *)
-      if !solved then Format.printf "%a@\n@\n" Pp.map state
-    end
+    let f n = hfunc n + g in
+    Hashtbl.add seen_states state ();
+    if is_solved state goal then begin
+      solved := true;
+      Format.printf "half assed code say What ?@\n%a@\n------What ?@\n" Pp.map
+        state
+    end else
+      get_children size state
+      |> List.filter_map (fun child ->
+             if Hashtbl.mem seen_states child then
+               None
+             else
+               Some child )
+      |> List.sort (fun child1 child2 -> compare (f child1) (f child2))
+      |> List.iter (fun child -> if not !solved then expand child (g + 1));
+    if !solved then Format.printf "%a@\n@\n" Pp.map state
+    (* This will print states in reverse order of resolution,
+     * since its located after the recursive call *)
   in
   expand state 0
 

@@ -16,10 +16,10 @@ let pp_puzzle fmt puzzle =
 let display_inversions fmt inversions_l nb =
   Format.fprintf fmt "INVERSIONS:@.%a@."
     (Format.pp_print_list
-      ~pp_sep:(fun fmt () -> Format.fprintf fmt "@.")
-      (Format.pp_print_list
-        ~pp_sep:(fun fmt () -> Format.fprintf fmt "-")
-        (fun fmt i -> Format.fprintf fmt "%d" i) ))
+       ~pp_sep:(fun fmt () -> Format.fprintf fmt "@.")
+       (Format.pp_print_list
+          ~pp_sep:(fun fmt () -> Format.fprintf fmt "-")
+          (fun fmt i -> Format.fprintf fmt "%d" i) ) )
     inversions_l;
   Format.printf "Nb of inversions in grid is: %d@." nb
 
@@ -33,11 +33,29 @@ let pp_print_array ?(pp_sep = Format.pp_print_cut) pp_v ppf a =
     done
   end
 
-let pp_line fmt line =
-    pp_print_array ~pp_sep:(fun fmt () -> Format.fprintf fmt " - ")
-    Format.pp_print_int fmt line
-
+let pp_line fmt puzzle =
+  let len = Immut_array.length puzzle in
+  let width =
+    if len < 3 then
+      1
+    else if len < 10 then
+      2
+    else
+      3
+  in
+  pp_print_array
+    ~pp_sep:(fun fmt () -> Format.fprintf fmt " - ")
+    (fun fmt value ->
+      let t = Format.dprintf "%0*d" width value in
+      Format.fprintf fmt "%s%t%s"
+        ( if value = 0 then
+          "\027[31m"
+        else
+          "\027[32m" )
+        t "\027[0m" )
+    fmt puzzle
 
 let map fmt puzzle =
-  pp_print_array ~pp_sep:(fun fmt () -> Format.fprintf fmt "@\n")
+  pp_print_array
+    ~pp_sep:(fun fmt () -> Format.fprintf fmt "@\n")
     pp_line fmt puzzle
