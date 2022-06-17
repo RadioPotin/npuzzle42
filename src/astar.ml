@@ -146,6 +146,9 @@ let rec solve_brutforce seen_states size goal state =
  * Storing in the hashtabl ONLY states that we have CHOSEN in our path
  *
  * *)
+
+let opened = []
+
 let astar seen_states size state goal hfunc =
   let rec expand state g =
     let f n = hfunc n + g in
@@ -155,15 +158,21 @@ let astar seen_states size state goal hfunc =
       Format.printf "half assed code say What ?@\n%a@\n------What ?@\n" Pp.map
         state
     end else
-      get_children size state
-      |> List.filter_map (fun child ->
-             if Hashtbl.mem seen_states child then
-               None
-             else
-               Some child )
-      |> List.sort (fun child1 child2 -> compare (f child1) (f child2))
-      |> List.iter (fun child -> if not !solved then expand child (g + 1));
-    if !solved then Format.printf "%a@\n@\n" Pp.map state
+      let children = get_children size state in
+      let unordered =
+        List.filter_map
+          (fun child ->
+            if Hashtbl.mem seen_states child then
+              None
+            else
+              Some child )
+          children
+      in
+      let ordered =
+        List.sort (fun child1 child2 -> compare (f child1) (f child2)) unordered
+      in
+      List.iter (fun child -> if not !solved then expand child (g + 1)) ordered;
+      if !solved then Format.printf "%a@\n@\n" Pp.map state
     (* This will print states in reverse order of resolution,
      * since its located after the recursive call *)
   in
