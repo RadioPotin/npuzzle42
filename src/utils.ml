@@ -21,8 +21,7 @@ let no_duplicate_values lines =
         line )
     lines
 
-let has_blank_char lines =
-  List.exists (List.exists (fun v -> v = 0)) lines
+let has_blank_char lines = List.exists (List.exists (fun v -> v = 0)) lines
 
 (** [map_maker s] reads the maps from [s], splits it and recovers the puzzle
     while making some sanity assertions on the nature of the puzzle *)
@@ -61,7 +60,7 @@ let map_maker s : Types.npuzzle =
   assert (List.for_all (fun line -> List.length line = size) lines);
   assert (no_duplicate_values lines);
   assert (has_blank_char lines);
-  (size, map_of_lists lines )
+  (size, map_of_lists lines)
 
 (** [get_inversions values] returns a tuple (inversions:int list *
     inversions_nb:int). this is used when figuring out the solvability of the

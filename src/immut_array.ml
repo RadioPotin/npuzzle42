@@ -118,3 +118,7 @@ let pp ?(pp_start = fun _ () -> ()) ?(pp_stop = fun _ () -> ())
     pp_item out a.(k)
   done;
   pp_stop out ()
+
+let iter2 f a = iter (fun a -> iter f a) a
+
+let iteri2 f a = iteri (fun i a -> iteri (f i) a) a

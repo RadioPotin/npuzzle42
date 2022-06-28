@@ -6,7 +6,7 @@
 
 (** Array of values of type 'a. The underlying type really is an array, but it
     will never be modified. It should be covariant but OCaml will not accept it. *)
-type 'a t
+type 'a t = 'a array
 
 val empty : 'a t
 
@@ -94,3 +94,7 @@ val pp :
   -> ?pp_sep:unit printer
   -> 'a printer
   -> 'a t printer
+
+val iter2 : ('a -> unit) -> 'a t t -> unit
+
+val iteri2 : (int -> int -> 'a -> unit) -> 'a t t -> unit

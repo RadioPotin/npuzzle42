@@ -89,99 +89,54 @@ let solved = ref false
     state is equivalent to the goal state established early in the program. This
     function will be modified as the program improves. Its necessity isn't quite
     proven yet *)
-let is_solved current goal =
-  let flatten = List.flatten in
-  let to_lists = Utils.map_to_lists in
-  let remove_blank state =
-    List.filter (fun tile -> tile <> 0) @@ flatten @@ to_lists state
+let is_solved current =
+  let last = ref 0 in
+  try
+    Immut_array.iter2
+      (fun n ->
+        if n < !last then raise Exit;
+        last := n )
+      current;
+    true
+  with
+  | Exit -> false
+
+let astar seen_states size state score =
+  let score g n = score n - g in
+  let pp_h state = Format.printf "%d@\n" (Heuristics.informed_search state) in
+
+  let rec expand total_opened = function
+    | [] -> Format.printf "NO MORE OPENED STATE@\n"
+    | (state, depth) :: r ->
+      if is_solved state then begin
+        solved := true;
+        Pp.final state total_opened depth
+      end else (
+        pp_h state;
+        Pp.state state;
+        Hashtbl.replace seen_states state ();
+
+        let children = get_children size state in
+        let children =
+          List.filter
+            (fun state -> not @@ Hashtbl.mem seen_states state)
+            children
+        in
+        let children = List.map (fun child -> (child, depth + 1)) children in
+        let ordered =
+          List.stable_sort
+            (fun (child1, depth1) (child2, depth2) ->
+              compare (score depth2 child2) (score depth1 child1) )
+            children
+        in
+
+        expand (total_opened + List.length ordered) (ordered @ r)
+      )
   in
-  let goal = remove_blank goal in
-  let current = remove_blank current in
-  goal = current
-
-(** [solve_brutforce seen_states size goal state] is self explanatory. This
-    function Stack Overflows for puzzles of size 4 onward. This function was
-    useful in order to grasp the problem first hand *)
-let rec solve_brutforce seen_states size goal state =
-  (* Things this function does NOT do:
-   *
-   * keep track of depth
-   * run heuristic on current state
-   * order children by heuristic cost
-   * correctly check g(n) + h(n)
-   *
-   * *)
-  if Hashtbl.mem seen_states state then
-    ()
-  else begin
-    Hashtbl.add seen_states state ();
-    ( if is_solved state goal then begin
-      solved := true;
-      Format.printf "The BRUTE is done:@\n%a@\n------@\n" Pp.map state
-    end else
-      let children = get_children size state in
-      List.iter
-        (fun child ->
-          if not !solved then solve_brutforce seen_states size goal child )
-        children );
-    (* This will print states in reverse order of resolution,
-     * since its located after the recursive call *)
-    if !solved then Format.printf "%a@\n@\n" Pp.map state
-  end
-
-(*
- * TODO
- * - Properly handle Hashtbl storing with g value.
- * - Properly remember chosen states for later PP
- *
- * Astar aims at reducing f(n) when f(n) = g(n) + h(n)
- * n = current node
- * g = depth
- * h = heuristic cost estimation
- *
- * Meaning that, when choosing next state to expand,
- * we must remember all nodes visited (with their corresponding depth)
- * and choose in regards to all we have seen before.
- *
- * Storing in the hashtabl ONLY states that we have CHOSEN in our path
- *
- * *)
-
-let opened = []
-
-let astar seen_states size state goal hfunc =
-  let rec expand state g =
-    let f n = hfunc n + g in
-    Hashtbl.add seen_states state ();
-    if is_solved state goal then begin
-      solved := true;
-      Format.printf "half assed code say What ?@\n%a@\n------What ?@\n" Pp.map
-        state
-    end else
-      let children = get_children size state in
-      let unordered =
-        List.filter_map
-          (fun child ->
-            if Hashtbl.mem seen_states child then
-              None
-            else
-              Some child )
-          children
-      in
-      let ordered =
-        List.sort (fun child1 child2 -> compare (f child1) (f child2)) unordered
-      in
-      List.iter (fun child -> if not !solved then expand child (g + 1)) ordered;
-      if !solved then Format.printf "%a@\n@\n" Pp.map state
-    (* This will print states in reverse order of resolution,
-     * since its located after the recursive call *)
-  in
-  expand state 0
+  expand 0 [ (state, 0) ]
 
 (** [solve_with heuristic_f size state] main astar solver function. Takes an
     heuristic, size and initial state. *)
 let solve_with heuristic_f size state =
   let seen_states = Hashtbl.create 512 in
-  let goal = Generate.goal size in
-  let hfunc = heuristic_f size in
-  astar seen_states size state goal hfunc
+  astar seen_states size state heuristic_f

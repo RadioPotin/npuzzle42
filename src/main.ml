@@ -1,6 +1,10 @@
 open Npuzzle
 open Cmdliner
 
+let colour =
+  let doc = "Print colourful output for readability" in
+  Arg.(value & flag & info [ "colour"; "c" ] ~docv:"colour" ~doc)
+
 let input =
   let doc = "File with NPuzzle definition." in
   Arg.(value & pos 0 string "" & info [] ~docv:"NPuzzle file" ~doc)
@@ -32,28 +36,31 @@ let read_puzzle_file filename =
 
 (** [verify_solvability fmt puzzle] place holder function used for assertion of
     solvability of the given puzzle *)
-let verify_solvability fmt puzzle =
+let verify_solvability _fmt puzzle =
   if Utils.is_solvable puzzle then
-    Format.fprintf fmt "SOLVABLE@."
-  else (
-    Format.fprintf fmt "UNSOLVABLE@.";
+    ()
+  else
     exit 1
-  )
 
 let solve fmt size map =
   verify_solvability fmt (size, map);
-  Format.fprintf fmt "%a@\nSOLVING@." Pp.map map;
+  Format.fprintf fmt "Solving:@\n";
   Astar.solve_with Heuristics.informed_search size map
 
 (** [main input] entry point to the program, if input is [""] then a valid map
     is automatically generated. Said map cannot exceed the size hardcoded in
     [Generate] module nor can it be equal to 0 or 1 *)
-let main input =
+let main input colour =
   let fmt = Format.std_formatter in
   match input with
+  | "saucisse" ->
+    let p = [| [| 1; 0 |]; [| 2; 3 |] |] in
+    Format.printf "%d@\n" (Heuristics.informed_search p);
+    ()
   | "" ->
     Format.printf "GENERATING SOLVABLE MAP@.";
     let size, puzzle = Generate.gen () in
+    if colour then Pp.with_colour ();
     solve fmt size puzzle
   | input -> (
     let puzzle_file = String.concat "\n" (read_puzzle_file input) in
@@ -61,6 +68,7 @@ let main input =
     try
       Pp.file fmt puzzle_file;
       let size, map = Utils.map_maker puzzle_file in
+      if colour then Pp.with_colour ();
       solve fmt size map
     with
     | Types.Syntax_error s ->
@@ -70,6 +78,6 @@ let main input =
       Format.eprintf "ERROR: %s@." s;
       exit 1 )
 
-let npuzzle = Term.(const main $ input)
+let npuzzle = Term.(const main $ input $ colour)
 
 let () = Term.exit @@ Term.eval (npuzzle, usage)
