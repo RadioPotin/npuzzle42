@@ -101,18 +101,23 @@ let is_solved current =
   with
   | Exit -> false
 
+module Saucisse = Utils.Saucisse
+
 let astar seen_states size state score =
   let score g n = score n - g in
-  let pp_h state = Format.printf "%d@\n" (Heuristics.informed_search state) in
+  let map = Saucisse.empty in
+  let map = Saucisse.push (state, 0) (score 0 state) map in
 
-  let rec expand total_opened = function
-    | [] -> Format.printf "NO MORE OPENED STATE@\n"
-    | (state, depth) :: r ->
+  let rec expand total_opened map =
+    match Saucisse.take_max map with
+    | None -> assert false
+    | Some ((state, depth), _, map) ->
       if is_solved state then begin
         solved := true;
         Pp.final state total_opened depth
       end else (
-        pp_h state;
+        (*Pp.heuristep map;
+        *)
         Pp.state state;
         Hashtbl.replace seen_states state ();
 
@@ -122,18 +127,18 @@ let astar seen_states size state score =
             (fun state -> not @@ Hashtbl.mem seen_states state)
             children
         in
-        let children = List.map (fun child -> (child, depth + 1)) children in
-        let ordered =
-          List.stable_sort
-            (fun (child1, depth1) (child2, depth2) ->
-              compare (score depth2 child2) (score depth1 child1) )
-            children
+        let map =
+          List.fold_left
+            (fun map child ->
+              let chair = (child, depth + 1) in
+              Saucisse.push chair (score (depth + 1) child) map )
+            map children
         in
 
-        expand (total_opened + List.length ordered) (ordered @ r)
+        expand (total_opened + List.length children) map
       )
   in
-  expand 0 [ (state, 0) ]
+  expand 0 map
 
 (** [solve_with heuristic_f size state] main astar solver function. Takes an
     heuristic, size and initial state. *)

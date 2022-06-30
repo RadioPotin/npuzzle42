@@ -5,6 +5,13 @@ let colour =
   let doc = "Print colourful output for readability" in
   Arg.(value & flag & info [ "colour"; "c" ] ~docv:"colour" ~doc)
 
+let heuristic =
+  let doc = "Some of the following heuristic functions" in
+  Arg.(
+    value
+    & pos 1 string "Manhattan_distance"
+    & info [] ~docv:"Manhattan_distance, informed_search" ~doc)
+
 let input =
   let doc = "File with NPuzzle definition." in
   Arg.(value & pos 0 string "" & info [] ~docv:"NPuzzle file" ~doc)
@@ -45,28 +52,26 @@ let verify_solvability _fmt puzzle =
 let solve fmt size map =
   verify_solvability fmt (size, map);
   Format.fprintf fmt "Solving:@\n";
-  Astar.solve_with Heuristics.informed_search size map
+  Astar.solve_with !Heuristics.given size map
 
 (** [main input] entry point to the program, if input is [""] then a valid map
     is automatically generated. Said map cannot exceed the size hardcoded in
     [Generate] module nor can it be equal to 0 or 1 *)
-let main input colour =
+let main input heuristic colour =
   let fmt = Format.std_formatter in
+  if colour then Pp.with_colour ();
   match input with
-  | "saucisse" ->
-    let p = [| [| 1; 0 |]; [| 2; 3 |] |] in
-    Format.printf "%d@\n" (Heuristics.informed_search p);
-    ()
   | "" ->
     Format.printf "GENERATING SOLVABLE MAP@.";
+    Heuristics.select heuristic;
     let size, puzzle = Generate.gen () in
-    if colour then Pp.with_colour ();
     solve fmt size puzzle
   | input -> (
     let puzzle_file = String.concat "\n" (read_puzzle_file input) in
 
     try
-      Pp.file fmt puzzle_file;
+      Pp.file fmt puzzle_file input;
+      Heuristics.select heuristic;
       let size, map = Utils.map_maker puzzle_file in
       if colour then Pp.with_colour ();
       solve fmt size map
@@ -78,6 +83,6 @@ let main input colour =
       Format.eprintf "ERROR: %s@." s;
       exit 1 )
 
-let npuzzle = Term.(const main $ input $ colour)
+let npuzzle = Term.(const main $ input $ heuristic $ colour)
 
 let () = Term.exit @@ Term.eval (npuzzle, usage)

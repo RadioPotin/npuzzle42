@@ -1,3 +1,4 @@
+(** [tablet] is an array of colours to use for the colouring of output. *)
 let tablet =
   [| "" (* no clour *)
    ; "\027[0m" (* reset *)
@@ -10,30 +11,49 @@ let tablet =
    ; "\027[37m" (* white *)
   |]
 
-let colour_selector fmt colour = Format.fprintf fmt "%s" tablet.(colour)
+(** [file fmt puzzle_file puzzle_name] Prints the name and contents of the map
+    file passed as a parameter to the program. *)
+let file fmt puzzle_file puzzle_name =
+  Format.fprintf fmt "Reading map from file '%s'@\n@\nMAP:@\n%s@\n@\n"
+    puzzle_name puzzle_file
 
-let file fmt puzzle_file =
-  Format.fprintf fmt "FILE:----@.%s@.----------@.@." puzzle_file
-
+(** [colour] boolean reference for colour flag in cli. *)
 let colour = ref false
 
+(** [with_colour ()] raises [colour] flag. *)
 let with_colour () = colour := true
 
-let colour_prefix fmt value =
-  if !colour then
-    if value = 0 then
-      colour_selector fmt 2
-    else
-      colour_selector fmt 3
-  else
-    colour_selector fmt 0
+(** [colour_prefix fmt colour] function that prints colour control sequences in
+    the shell using the [tablet] array. *)
+let colour_prefix fmt colour = Format.fprintf fmt "%s" tablet.(colour)
 
+(** [colour_suffix fmt ()] closes a colour control sequence or nothing if
+    [colour] flag isn't raised. *)
 let colour_suffix fmt () =
   if !colour then
-    colour_selector fmt 1
+    colour_prefix fmt 1
   else
-    colour_selector fmt 0
+    colour_prefix fmt 0
 
+(** [colour_value fmt value] function used specifically for pretty-printing the
+    map at each level of the search. Takes colours the tiles by differentiating
+    the 0 value and the others, or nothing if [colour] flag isn't set. *)
+let colour_value fmt value =
+  if !colour then
+    if value = 0 then
+      colour_prefix fmt 2
+    else
+      colour_prefix fmt 3
+  else
+    colour_prefix fmt 0
+
+(** [colour_wrap fmt (colour, string)] wraps calls to [colour_prefix] to
+    pretty-print the string passed as argument with the colour passed as
+    argument in the tuple parameter. *)
+let colour_wrap fmt (colour, s) =
+  Format.fprintf fmt "%a%s%a@\n" colour_prefix colour s colour_suffix ()
+
+(** [pp_puzzle fmt puzzle] prints a map. *)
 let pp_puzzle fmt puzzle =
   Format.fprintf fmt "%a@."
     (Format.pp_print_list
@@ -46,6 +66,8 @@ let pp_puzzle fmt puzzle =
            row ) )
     puzzle
 
+(** [display_inversions fmt inversions_l nb] Function mainly used for debugging.
+    This allows the display of pre-calculated inversions found in a map. *)
 let display_inversions fmt inversions_l nb =
   Format.fprintf fmt "INVERSIONS:@.%a@."
     (Format.pp_print_list
@@ -56,6 +78,7 @@ let display_inversions fmt inversions_l nb =
     inversions_l;
   Format.printf "Nb of inversions in grid is: %d@." nb
 
+(** [pp_puzzle fmt puzzle] prints an array. *)
 let pp_print_array ?(pp_sep = Format.pp_print_cut) pp_v ppf a =
   let len = Immut_array.length a in
   if len > 0 then begin
@@ -66,6 +89,9 @@ let pp_print_array ?(pp_sep = Format.pp_print_cut) pp_v ppf a =
     done
   end
 
+(** [pp_line fmt puzzle] prints an array and pads the width of each tile output
+    for pretty-printing. Checks the value of each tile for colouring if
+    necessary. *)
 let pp_line fmt puzzle =
   let len = Immut_array.length puzzle in
   let width =
@@ -80,16 +106,31 @@ let pp_line fmt puzzle =
     ~pp_sep:(fun fmt () -> Format.fprintf fmt " - ")
     (fun fmt value ->
       let t = Format.dprintf "%0*d" width value in
-      Format.fprintf fmt "%a%t%a" colour_prefix value t colour_suffix () )
+      Format.fprintf fmt "%a%t%a" colour_value value t colour_suffix () )
     fmt puzzle
 
+(** [map fmt puzzle] prints arrays of arrays and pads the width of each tile
+    output for pretty-printing. Checks the value of each tile for colouring if
+    necessary. *)
 let map fmt puzzle =
   pp_print_array
     ~pp_sep:(fun fmt () -> Format.fprintf fmt "@\n")
     pp_line fmt puzzle
 
+(** [heuristep map_of_puzzles] Function mainly used for debugging of heuristic
+    results throughout the search. *)
+let heuristep map_of_puzzles =
+  Format.fprintf Format.std_formatter "@[<hov2>%a@]@.@."
+    (Utils.Saucisse.pp (fun fmt (v, k) ->
+         Format.fprintf fmt "DEPTH: %d@\n@[<hov 2>STATE:@\n%a@]@\n" k map v ) )
+    map_of_puzzles
+
+(** [state state] debugging function to print each state expanded during the
+    search. *)
 let state state = Format.fprintf Format.std_formatter "%a@\n@\n" map state
 
+(** [final state total_opened depth] Pretty prints the result of the search with
+    all relevant information. *)
 let final state total_opened depth =
   Format.fprintf Format.std_formatter
     "Goal reached!@\n\

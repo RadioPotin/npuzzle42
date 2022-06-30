@@ -4,6 +4,59 @@ let map_to_lists puzzle =
 let map_of_lists puzzle =
   Immut_array.of_list (List.map Immut_array.of_list puzzle)
 
+module Saucisse : sig
+  type 'a t
+
+  val empty : 'a t
+
+  val push : 'a -> int -> 'a t -> 'a t
+
+  val take_max : 'a t -> ('a * int * 'a t) option
+
+  val pp : (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a t -> unit
+end = struct
+  module T = Map.Make (Int)
+
+  type 'a t = 'a list T.t
+
+  let empty = T.empty
+
+  let push v k map =
+    let new_list =
+      match T.find_opt k map with
+      | None -> [ v ]
+      | Some l -> v :: l
+    in
+    T.add k new_list map
+
+  let take_max map =
+    match T.max_binding_opt map with
+    | None -> None
+    | Some (k, v) -> (
+      match v with
+      | [] -> assert false
+      | x :: r ->
+        let map =
+          match r with
+          | [] -> T.remove k map
+          | _l -> T.add k r map
+        in
+        Some (x, k, map) )
+
+  let pp f fmt v =
+    let v = T.bindings v in
+    Format.fprintf fmt "%a"
+      (Format.pp_print_list
+         ~pp_sep:(fun fmt () -> Format.fprintf fmt "@\n")
+         (fun fmt (k, l) ->
+           Format.fprintf fmt "{KEY:%d _ %a}" k
+             (Format.pp_print_list
+                ~pp_sep:(fun fmt () -> Format.fprintf fmt " - ")
+                f )
+             l ) )
+      v
+end
+
 (** [no_duplicate_values lines] verifies that there are no duplicated tile in
     the puzzle *)
 let no_duplicate_values lines =
