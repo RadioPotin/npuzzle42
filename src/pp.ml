@@ -63,6 +63,11 @@ let colour_value fmt value =
 let colour_wrap fmt (colour, s) =
   Format.fprintf fmt "%a%s%a" colour_prefix colour s colour_suffix ()
 
+let not_solvable () =
+  let s = Format.sprintf "ERROR: Your map is unsolvable! >:C" in
+  Format.fprintf Format.std_formatter "%a@\n" colour_wrap (1, s);
+  exit 1
+
 (** [pp_puzzle fmt puzzle] prints a map. *)
 let pp_puzzle fmt puzzle =
   Format.fprintf fmt "%a@."

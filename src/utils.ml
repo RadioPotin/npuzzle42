@@ -250,14 +250,6 @@ let is_solvable (size, puzzle) =
     || (not @@ blank_location_from_bottom is_on_even_row values)
        && is_even inversions_nb
 
-(** [verify_solvability fmt puzzle] place holder function used for assertion of
-    solvability of the given puzzle *)
-let verify_solvability _fmt puzzle =
-  if is_solvable puzzle then
-    ()
-  else
-    exit 1
-
 (** [read_puzzle_file filename] opens a file given as argument to the program
     and returns it as a a list of strings *)
 let read_puzzle_file filename =

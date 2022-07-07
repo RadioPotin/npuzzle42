@@ -1,8 +1,10 @@
 open Npuzzle
 
-let solve fmt size map heuristic =
-  Utils.verify_solvability fmt (size, map);
-  Astar.solve_with heuristic size map
+let solve size map heuristic =
+  if Utils.is_solvable (size, map) then
+    Astar.solve_with heuristic size map
+  else
+    Pp.not_solvable ()
 
 (** [main input] entry point to the program, if input is [""] then a valid map
     is automatically generated. Said map cannot exceed the size hardcoded in
@@ -14,14 +16,14 @@ let main input heuristic =
     let size, puzzle = Generate.gen () in
     let s = Format.sprintf "GENERATING SOLVABLE MAP OF SIZE %d@." size in
     Pp.colour_wrap fmt (4, s);
-    solve fmt size puzzle heuristic
+    solve size puzzle heuristic
   | Some input -> (
     let puzzle_file = String.concat "\n" (Utils.read_puzzle_file input) in
 
     try
       Pp.file fmt puzzle_file input;
       let size, map = Utils.map_maker puzzle_file in
-      solve fmt size map heuristic
+      solve size map heuristic
     with
     | Types.Syntax_error s ->
       Format.eprintf "ERROR: %s@." s;

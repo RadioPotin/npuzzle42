@@ -81,10 +81,6 @@ let get_children size state =
   in
   List.map change_current_state_with possible_movements
 
-(** [solved] is a boolean flag used to assert if the algorithm has reached a
-    valid state at some point in its traversal *)
-let solved = ref false
-
 (** [is_solved current goal] temporary function used to assert if a current
     state is equivalent to the goal state established early in the program. This
     function will be modified as the program improves. Its necessity isn't quite
@@ -113,30 +109,58 @@ let astar seen_states size state score =
   let map = Saucisse.push (state, 0, None) (score 0 state) map in
 
   let rec expand total_opened max map acc =
+    (* take_max pops the state with the highest heuristic score out the map
+     * This does not take into account the sequentiallity of steps,
+     * we use the Hashtbl to trace that *)
     match Saucisse.take_max map with
     | None -> assert false
     | Some (((state, depth, parent) as s), _, map2) ->
+      (* Check if we have just poped off the queue the goal state of the search *)
       if is_solved state then begin
-        solved := true;
-        Hashtbl.replace seen_states state parent;
-        (s :: acc, total_opened, depth, max)
-      end else (
+        (* If so,
+         * add goal state to explored path
+         * add goal state to the table of states we have seen *)
+        let acc = s :: acc in
         Hashtbl.replace seen_states state parent;
 
+        (* Return all fruits of the search:
+         * 1. expansion path in order of exploration
+         *      (reversed, since the goal will be the first element of that list)
+         * 2. total number of opened states
+         * 3. depth of the search, number of steps for solving puzzle
+         * 4. maximum number of states represented at the same time *)
+        (acc, total_opened, depth, max)
+      end else (
+        (* If not,
+         * Mark state as seen and expand it.
+         *        IE: add its children to the priority queue
+         *        in order of heuristic score
+         * NB: We pair a given state to it parent one for later
+         *     use in the backtracing of the search from goal state to initial state *)
+        Hashtbl.replace seen_states state parent;
+
+        (* Get all children from a given state we poped off the priority queue *)
         let children = get_children size state in
+        (* Filter out all children in that set we have already seen in the search *)
         let children =
           List.filter
             (fun state -> not @@ Hashtbl.mem seen_states state)
             children
         in
+
+        (* Update map with all children remaining after filtering *)
         let map =
           List.fold_left
             (fun map child ->
               let chair = (child, depth + 1, Some state) in
+              (* Push add a binding to the map KEY:VALUE as follows:
+               * HEURISTIC_SCORE:(STATE, DEPTH, PARENT STATE OPTION) *)
               Saucisse.push chair (score (depth + 1) child) map )
             map2 children
         in
 
+        (* Total is accumulated over the search to keep track of how many states we
+         * have had in our `opened` state *)
         let total = total_opened + List.length children in
         let max =
           if total > max then
@@ -147,6 +171,7 @@ let astar seen_states size state score =
         expand total max map (s :: acc)
       )
   in
+  (* function to extract from our goal state a list of parent states up to the very first state of the search *)
   let trace_back_path_to_goal path =
     let child, _depth, parent = List.hd path in
     let rec trace_back acc child opt_parent_of_child =
@@ -158,8 +183,12 @@ let astar seen_states size state score =
     in
     trace_back [] child parent
   in
+  (* Recursively search the puzzle starting with the initial state in the map *)
   let reversed_expansion_path, total_opened, depth, max = expand 0 0 map [] in
+  (* Backtrace the expansion path from goal state in order to extract a list of
+   * effective steps from start to end *)
   let actual_path = trace_back_path_to_goal reversed_expansion_path in
+  (* Print sequence of steps from initial state to goal state *)
   let rec print_path = function
     | [] -> ()
     | [ state ] -> Pp.final state total_opened depth max
