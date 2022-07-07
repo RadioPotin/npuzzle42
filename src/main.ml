@@ -1,80 +1,27 @@
 open Npuzzle
-open Cmdliner
 
-let colour =
-  let doc = "Print colourful output for readability" in
-  Arg.(value & flag & info [ "colour"; "c" ] ~docv:"colour" ~doc)
-
-let heuristic =
-  let doc = "Some of the following heuristic functions" in
-  Arg.(
-    value
-    & pos 1 string "Manhattan_distance"
-    & info [] ~docv:"Manhattan_distance, informed_search" ~doc)
-
-let input =
-  let doc = "File with NPuzzle definition." in
-  Arg.(value & pos 0 string "" & info [] ~docv:"NPuzzle file" ~doc)
-
-let usage =
-  let doc =
-    "This small program is a solver for NPuzzles. It implements the A* \
-     algorithm and three different heuristics to go along with it."
-  in
-  let man =
-    [ `S Manpage.s_bugs; `P "Email bug reports to <laradiopotin@gmail.com>." ]
-  in
-  Term.info "NPuzzle" ~version:"%%VERSION%%" ~doc ~exits:Term.default_exits ~man
-
-(** [read_puzzle_file filename] opens a file given as argument to the program
-    and returns it as a a list of strings *)
-let read_puzzle_file filename =
-  let lines = ref [] in
-  let chan = open_in filename in
-  try
-    while true do
-      lines := input_line chan :: !lines
-    done;
-    !lines
-  with
-  | End_of_file ->
-    close_in chan;
-    List.rev !lines
-
-(** [verify_solvability fmt puzzle] place holder function used for assertion of
-    solvability of the given puzzle *)
-let verify_solvability _fmt puzzle =
-  if Utils.is_solvable puzzle then
-    ()
-  else
-    exit 1
-
-let solve fmt size map =
-  verify_solvability fmt (size, map);
-  Format.fprintf fmt "Solving:@\n";
-  Astar.solve_with !Heuristics.given size map
+let solve fmt size map heuristic =
+  Utils.verify_solvability fmt (size, map);
+  Astar.solve_with heuristic size map
 
 (** [main input] entry point to the program, if input is [""] then a valid map
     is automatically generated. Said map cannot exceed the size hardcoded in
     [Generate] module nor can it be equal to 0 or 1 *)
-let main input heuristic colour =
+let main input heuristic =
   let fmt = Format.std_formatter in
-  if colour then Pp.with_colour ();
   match input with
-  | "" ->
-    Format.printf "GENERATING SOLVABLE MAP@.";
-    Heuristics.select heuristic;
+  | None ->
     let size, puzzle = Generate.gen () in
-    solve fmt size puzzle
-  | input -> (
-    let puzzle_file = String.concat "\n" (read_puzzle_file input) in
+    let s = Format.sprintf "GENERATING SOLVABLE MAP OF SIZE %d@." size in
+    Pp.colour_wrap fmt (4, s);
+    solve fmt size puzzle heuristic
+  | Some input -> (
+    let puzzle_file = String.concat "\n" (Utils.read_puzzle_file input) in
 
     try
       Pp.file fmt puzzle_file input;
-      Heuristics.select heuristic;
       let size, map = Utils.map_maker puzzle_file in
-      if colour then Pp.with_colour ();
-      solve fmt size map
+      solve fmt size map heuristic
     with
     | Types.Syntax_error s ->
       Format.eprintf "ERROR: %s@." s;
@@ -83,6 +30,44 @@ let main input heuristic colour =
       Format.eprintf "ERROR: %s@." s;
       exit 1 )
 
-let npuzzle = Term.(const main $ input $ heuristic $ colour)
+let () =
+  let heuristic = ref "Manhattan" in
+  let input = ref None in
+  let help = Utils.Cli.help in
+  let usage = Utils.Cli.usage in
+  let check_file s =
+    if Sys.file_exists s then
+      input := Some s
+    else begin
+      Pp.with_colour ();
+      Pp.colour_wrap Format.std_formatter (2, "No such file or directory.")
+    end
+  in
+  let finish_with f =
+    f ();
+    exit 1
+  in
 
-let () = Term.exit @@ Term.eval (npuzzle, usage)
+  let cli =
+    [ ("--help", Arg.Unit (fun () -> finish_with help), "")
+    ; ("-help", Arg.Unit (fun () -> finish_with help), "")
+    ; ("-h", Arg.Unit (fun () -> finish_with help), "")
+    ; ("--usage", Arg.Unit (fun () -> finish_with usage), "")
+    ; ("-u", Arg.Unit (fun () -> finish_with usage), "")
+    ; ("--colour", Arg.Unit (fun () -> Pp.with_colour ()), "")
+    ; ("-c", Arg.Unit (fun () -> Pp.with_colour ()), "")
+    ; ("--heuristic", Arg.String (fun s -> heuristic := s), "")
+    ; ("-hfunc", Arg.String (fun s -> heuristic := s), "")
+    ; ("--file", Arg.String check_file, "")
+    ; ("-f", Arg.String check_file, "")
+    ]
+  in
+  Arg.parse cli
+    (fun s ->
+      help ();
+      failwith @@ Format.sprintf "unknown arg `%s`" s )
+    "";
+
+  let input = !input in
+  let heuristic = !heuristic in
+  main input heuristic

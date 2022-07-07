@@ -22,8 +22,6 @@
    (>= 4.08))
   (dune
    (>= 2.8))
-  (cmdliner
-   (>= 1.0.4))
   (menhir
    (>= 2.1))
   (bisect_ppx

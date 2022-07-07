@@ -9,7 +9,6 @@ bug-reports: "https://github.com/RadioPotin/npuzzle42/issues"
 depends: [
   "ocaml" {>= "4.08"}
   "dune" {>= "2.8" & >= "2.8"}
-  "cmdliner" {>= "1.0.4"}
   "menhir" {>= "2.1"}
   "bisect_ppx" {with-test & >= "2.6" & dev}
   "odoc" {with-doc}

@@ -18,10 +18,14 @@ let manhattan_distance state : int =
   Immut_array.iteri2
     (fun j i v ->
       let nj, ni = normal_coordinates v in
-      let manj, mani = (abs j - nj, abs i - ni) in
+      let manj, mani = (abs (j - nj), abs (i - ni)) in
       score := !score + manj + mani )
     state;
-  !score * -1
+  - !score
+
+let nb_of_inversions puzzle : int =
+  let values = Utils.map_to_lists puzzle in
+  -(snd @@ Utils.get_inversions values)
 
 let given = ref manhattan_distance
 
@@ -32,12 +36,22 @@ let select = function
   | "Manhattan"
   | "manhattan_distance"
   | "Manhattan_distance" ->
-    Pp.colour_wrap Format.std_formatter (6, "Using Manhattan_distance!");
+    let s = Format.sprintf "Using Manhattan_distance!@." in
+    Pp.colour_wrap Format.std_formatter (7, s);
     given := manhattan_distance
   | "inf"
   | "informed"
   | "inf_search"
   | "informed_search" ->
-    Pp.colour_wrap Format.std_formatter (6, "Using informed_search!");
+    let s = Format.sprintf "Using informed_search!@." in
+    Pp.colour_wrap Format.std_formatter (7, s);
     given := informed_search
+  | "inv"
+  | "inversions"
+  | "Inversions"
+  | "inversion_nb"
+  | "Inversions_nb" ->
+    let s = Format.sprintf "Using number of inversions!@." in
+    Pp.colour_wrap Format.std_formatter (7, s);
+    given := nb_of_inversions
   | _s -> Format.printf "Unknown heuristic, check usage for more information."

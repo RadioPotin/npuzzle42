@@ -97,4 +97,6 @@ val pp :
 
 val iter2 : ('a -> unit) -> 'a t t -> unit
 
+val fold2 : ('a -> 'b -> 'a) -> 'a -> 'b t t -> 'a
+
 val iteri2 : (int -> int -> 'a -> unit) -> 'a t t -> unit

@@ -121,4 +121,6 @@ let pp ?(pp_start = fun _ () -> ()) ?(pp_stop = fun _ () -> ())
 
 let iter2 f a = iter (fun a -> iter f a) a
 
+let fold2 f acc a = fold (fun acc a -> fold f acc a) acc a
+
 let iteri2 f a = iteri (fun i a -> iteri (f i) a) a

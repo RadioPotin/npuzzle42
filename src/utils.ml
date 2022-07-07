@@ -1,18 +1,88 @@
-let map_to_lists puzzle =
-  Immut_array.map Immut_array.to_list puzzle |> Immut_array.to_list
+module Cli = struct
+  (** [heurislist fmt l] Used to display the list of available heuristic
+      functions. *)
+  let heurislist fmt l =
+    Format.pp_print_list
+      ~pp_sep:(fun fmt () -> Format.fprintf fmt ", ")
+      (fun fmt hfunc -> Format.fprintf fmt "%s" hfunc)
+      fmt l
 
-let map_of_lists puzzle =
-  Immut_array.of_list (List.map Immut_array.of_list puzzle)
+  (** [usage ()] Displays full usage of the program. *)
+  let usage () =
+    Format.fprintf Format.std_formatter
+      {|NPUZZLE(1)                      NPuzzle Manual                      NPUZZLE(1)
 
+NAME
+       NPuzzle - This small program is a solver for NPuzzles. It implements
+       the A* algorithm and three different heuristics to go along with it.
+
+SYNOPSIS
+       NPuzzle [OPTIONS]
+
+OPTIONS
+       --colour, -c
+           Print colourful output for readability
+
+       --heuristic, -hfunc
+           One of the available heuristic functions used for A* algorithm
+
+       --file, -f
+           Specify a path to an NPuzzle map file. Look into the `puzzles` directory for information.
+
+       --help, -h
+           Some help on available options for the CLI of NPuzzle
+
+       --usage, -u
+           See this message
+
+EXIT STATUS
+       NPuzzle exits with the following status:
+
+       0   on success.
+
+       1   on failure.
+
+BUGS
+       Email bug reports to <laradiopotin@gmail.com>.
+|}
+
+  (** [help ()] Displays some help for the CLI of the program. *)
+  let help () =
+    Format.printf
+      {|Some help for the CLI:
+    - colour option is a flag, evaluates to true or false if found or not respectively.
+
+    - heuristic function option evaluates to one of the following functions:
+        { %a }.
+      Defaults to Manhattan Distance.
+      Parsing is generous with naming.
+      These functions are used during the search to establish the most optimal node to expand in the search tree.
+
+    - file option is a file that describes an NPUZZLE map, map can be unsolvable, and programm will say if so.
+    For more information about formatting NPUZZLE maps, look into the `puzzles` directory.
+|}
+      heurislist
+      [ "Manhattan Distance"; "Informed Search"; "Inversions Count" ]
+end
+
+(** Module Saucisse is the meat and bones of the datastructure used for the
+    search *)
 module Saucisse : sig
+  (** ['a t] abstract type for map *)
   type 'a t
 
+  (** [empty] returns an empty map. *)
   val empty : 'a t
 
+  (** [push 'a key map] Pushes to the map a binding of ('a, key) and returns an
+      updated map. *)
   val push : 'a -> int -> 'a t -> 'a t
 
+  (** [take_max map] returns an [('a * key * updated_map) Option.t] value. *)
   val take_max : 'a t -> ('a * int * 'a t) option
 
+  (** [pp f fmt map] printer for the datastructure. Takes a printer, a formatter
+      and a map. *)
   val pp : (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a t -> unit
 end = struct
   module T = Map.Make (Int)
@@ -76,6 +146,12 @@ let no_duplicate_values lines =
 
 let has_blank_char lines = List.exists (List.exists (fun v -> v = 0)) lines
 
+let map_to_lists puzzle =
+  Immut_array.map Immut_array.to_list puzzle |> Immut_array.to_list
+
+let map_of_lists puzzle =
+  Immut_array.of_list (List.map Immut_array.of_list puzzle)
+
 (** [map_maker s] reads the maps from [s], splits it and recovers the puzzle
     while making some sanity assertions on the nature of the puzzle *)
 let map_maker s : Types.npuzzle =
@@ -117,7 +193,8 @@ let map_maker s : Types.npuzzle =
 
 (** [get_inversions values] returns a tuple (inversions:int list *
     inversions_nb:int). this is used when figuring out the solvability of the
-    puzzle *)
+    puzzle. It operates on a flattened list of int values converted from
+    [Types.t] *)
 let get_inversions values =
   let rec map_inversions acc = function
     | [] -> List.rev acc
@@ -172,3 +249,26 @@ let is_solvable (size, puzzle) =
     && (not @@ is_even inversions_nb)
     || (not @@ blank_location_from_bottom is_on_even_row values)
        && is_even inversions_nb
+
+(** [verify_solvability fmt puzzle] place holder function used for assertion of
+    solvability of the given puzzle *)
+let verify_solvability _fmt puzzle =
+  if is_solvable puzzle then
+    ()
+  else
+    exit 1
+
+(** [read_puzzle_file filename] opens a file given as argument to the program
+    and returns it as a a list of strings *)
+let read_puzzle_file filename =
+  let lines = ref [] in
+  let chan = open_in filename in
+  try
+    while true do
+      lines := input_line chan :: !lines
+    done;
+    !lines
+  with
+  | End_of_file ->
+    close_in chan;
+    List.rev !lines

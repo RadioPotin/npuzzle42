@@ -11,11 +11,17 @@ let tablet =
    ; "\027[37m" (* white *)
   |]
 
+let heurislist fmt l =
+  Format.pp_print_list
+    ~pp_sep:(fun fmt () -> Format.fprintf fmt ", ")
+    (fun fmt hfunc -> Format.fprintf fmt "%s" hfunc)
+    fmt l
+
 (** [file fmt puzzle_file puzzle_name] Prints the name and contents of the map
     file passed as a parameter to the program. *)
 let file fmt puzzle_file puzzle_name =
-  Format.fprintf fmt "Reading map from file '%s'@\n@\nMAP:@\n%s@\n@\n"
-    puzzle_name puzzle_file
+  Format.fprintf fmt "Reading map from '%s'@\n@\nMAP:@\n%s@\n@\n" puzzle_name
+    puzzle_file
 
 (** [colour] boolean reference for colour flag in cli. *)
 let colour = ref false
@@ -24,8 +30,12 @@ let colour = ref false
 let with_colour () = colour := true
 
 (** [colour_prefix fmt colour] function that prints colour control sequences in
-    the shell using the [tablet] array. *)
-let colour_prefix fmt colour = Format.fprintf fmt "%s" tablet.(colour)
+    the shell using the [tablet] array if necessary. *)
+let colour_prefix fmt color =
+  if !colour then
+    Format.fprintf fmt "%s" tablet.(color)
+  else
+    ()
 
 (** [colour_suffix fmt ()] closes a colour control sequence or nothing if
     [colour] flag isn't raised. *)
@@ -51,7 +61,7 @@ let colour_value fmt value =
     pretty-print the string passed as argument with the colour passed as
     argument in the tuple parameter. *)
 let colour_wrap fmt (colour, s) =
-  Format.fprintf fmt "%a%s%a@\n" colour_prefix colour s colour_suffix ()
+  Format.fprintf fmt "%a%s%a" colour_prefix colour s colour_suffix ()
 
 (** [pp_puzzle fmt puzzle] prints a map. *)
 let pp_puzzle fmt puzzle =
@@ -122,7 +132,8 @@ let map fmt puzzle =
 let heuristep map_of_puzzles =
   Format.fprintf Format.std_formatter "@[<hov2>%a@]@.@."
     (Utils.Saucisse.pp (fun fmt (v, k) ->
-         Format.fprintf fmt "DEPTH: %d@\n@[<hov 2>STATE:@\n%a@]@\n" k map v ) )
+         Format.fprintf fmt "DEPTH: %d@\n@[<hov 2>OPENED STATES:@\n%a@]@\n" k
+           map v ) )
     map_of_puzzles
 
 (** [state state] debugging function to print each state expanded during the
@@ -131,10 +142,12 @@ let state state = Format.fprintf Format.std_formatter "%a@\n@\n" map state
 
 (** [final state total_opened depth] Pretty prints the result of the search with
     all relevant information. *)
-let final state total_opened depth =
-  Format.fprintf Format.std_formatter
-    "Goal reached!@\n\
-     %a@\n\
-     Total number of opened states: %d@\n\
-     Number of moves it took us   : %d@\n"
-    map state total_opened depth
+let final state total_opened depth max =
+  let goal_reached = Format.sprintf "Goal reached!@." in
+  let total_number = Format.sprintf "Total number of opened states:" in
+  let steps = Format.sprintf "Number of moves it took us   :" in
+  let maximum_states = Format.sprintf "Max number of states in mem  :" in
+  Format.fprintf Format.std_formatter "%a@\n%a@\n%a %d@\n%a %d@\n%a %d@\n" map
+    state colour_wrap (5, goal_reached) colour_wrap (4, total_number)
+    total_opened colour_wrap (4, steps) depth colour_wrap (4, maximum_states)
+    max

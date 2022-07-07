@@ -27,7 +27,7 @@ module Movement = struct
     else
       Some (x, y + 1)
 
-  let movements = [ move_up; move_down; move_left; move_right ]
+  let movements = [ move_up; move_right; move_down; move_left ]
 end
 
 (** [matrix_get p x y] returns the element of array [p] at coordinates [x] [y]*)
@@ -103,23 +103,25 @@ let is_solved current =
 
 module Saucisse = Utils.Saucisse
 
+(** [astar seen_states size state score] A* function. Sets up environment and
+    data structure and recursively expands all puzzle states until end is
+    reached. It tracks the depth of the algorithm, the total amount of
+    opened_states considered during the search. *)
 let astar seen_states size state score =
   let score g n = score n - g in
   let map = Saucisse.empty in
-  let map = Saucisse.push (state, 0) (score 0 state) map in
+  let map = Saucisse.push (state, 0, None) (score 0 state) map in
 
-  let rec expand total_opened map =
+  let rec expand total_opened max map acc =
     match Saucisse.take_max map with
     | None -> assert false
-    | Some ((state, depth), _, map) ->
+    | Some (((state, depth, parent) as s), _, map2) ->
       if is_solved state then begin
         solved := true;
-        Pp.final state total_opened depth
+        Hashtbl.replace seen_states state parent;
+        (s :: acc, total_opened, depth, max)
       end else (
-        (*Pp.heuristep map;
-        *)
-        Pp.state state;
-        Hashtbl.replace seen_states state ();
+        Hashtbl.replace seen_states state parent;
 
         let children = get_children size state in
         let children =
@@ -130,18 +132,53 @@ let astar seen_states size state score =
         let map =
           List.fold_left
             (fun map child ->
-              let chair = (child, depth + 1) in
+              let chair = (child, depth + 1, Some state) in
               Saucisse.push chair (score (depth + 1) child) map )
-            map children
+            map2 children
         in
 
-        expand (total_opened + List.length children) map
+        let total = total_opened + List.length children in
+        let max =
+          if total > max then
+            total
+          else
+            max
+        in
+        expand total max map (s :: acc)
       )
   in
-  expand 0 map
+  let trace_back_path_to_goal path =
+    let child, _depth, parent = List.hd path in
+    let rec trace_back acc child opt_parent_of_child =
+      match opt_parent_of_child with
+      | None -> child :: acc
+      | Some parent ->
+        let parent_of_parent = Hashtbl.find seen_states parent in
+        trace_back (child :: acc) parent parent_of_parent
+    in
+    trace_back [] child parent
+  in
+  let reversed_expansion_path, total_opened, depth, max = expand 0 0 map [] in
+  let actual_path = trace_back_path_to_goal reversed_expansion_path in
+  let rec print_path = function
+    | [] -> ()
+    | [ state ] -> Pp.final state total_opened depth max
+    | state :: r ->
+      Pp.state state;
+      print_path r
+  in
+  print_path actual_path
 
 (** [solve_with heuristic_f size state] main astar solver function. Takes an
     heuristic, size and initial state. *)
-let solve_with heuristic_f size state =
+let solve_with heuristic size initial_state =
   let seen_states = Hashtbl.create 512 in
-  astar seen_states size state heuristic_f
+  let solving = Format.sprintf "Solving... " in
+  let be_patient =
+    Format.sprintf "This could take a moment, please be patient...@."
+  in
+  Pp.colour_wrap Format.std_formatter (7, solving);
+  Heuristics.select heuristic;
+  Pp.colour_wrap Format.std_formatter (6, be_patient);
+  let heuristic_f = !Heuristics.given in
+  astar seen_states size initial_state heuristic_f

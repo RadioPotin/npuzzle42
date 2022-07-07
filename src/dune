@@ -1,12 +1,11 @@
 (library
  (public_name npuzzle)
  (modules utils types immut_array pp generate astar heuristics)
- (libraries cmdliner)
  (instrumentation
   (backend bisect_ppx)))
 
 (executable
-  (name main)
+ (name main)
  (public_name npuzzle)
  (modules main)
- (libraries cmdliner npuzzle))
+ (libraries npuzzle))
