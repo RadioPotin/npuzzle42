@@ -26,10 +26,10 @@ let main input heuristic =
       solve size map heuristic
     with
     | Types.Syntax_error s ->
-      Format.eprintf "ERROR: %s@." s;
+      Format.eprintf "SYNTAX ERROR: %s@." s;
       exit 1
     | Types.Format_error s ->
-      Format.eprintf "ERROR: %s@." s;
+      Format.eprintf "FORMAT ERROR: %s@." s;
       exit 1 )
 
 let () =

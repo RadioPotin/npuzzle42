@@ -80,10 +80,6 @@ module Saucisse : sig
 
   (** [take_max map] returns an [('a * key * updated_map) Option.t] value. *)
   val take_max : 'a t -> ('a * int * 'a t) option
-
-  (** [pp f fmt map] printer for the datastructure. Takes a printer, a formatter
-      and a map. *)
-  val pp : (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a t -> unit
 end = struct
   module T = Map.Make (Int)
 
@@ -112,19 +108,6 @@ end = struct
           | _l -> T.add k r map
         in
         Some (x, k, map) )
-
-  let pp f fmt v =
-    let v = T.bindings v in
-    Format.fprintf fmt "%a"
-      (Format.pp_print_list
-         ~pp_sep:(fun fmt () -> Format.fprintf fmt "@\n")
-         (fun fmt (k, l) ->
-           Format.fprintf fmt "{KEY:%d _ %a}" k
-             (Format.pp_print_list
-                ~pp_sep:(fun fmt () -> Format.fprintf fmt " - ")
-                f )
-             l ) )
-      v
 end
 
 (** [no_duplicate_values lines] verifies that there are no duplicated tile in
@@ -152,10 +135,24 @@ let map_to_lists puzzle =
 let map_of_lists puzzle =
   Immut_array.of_list (List.map Immut_array.of_list puzzle)
 
+let sanitize size lines =
+  if List.length lines <> size then
+    raise (Types.Format_error "Map and declared size are different.")
+  else if not @@ List.for_all (fun line -> List.length line = size) lines then
+    raise (Types.Format_error "Map must be square.")
+  else if not @@ no_duplicate_values lines then
+    raise (Types.Format_error "There are duplicated values in the map.")
+  else if not @@ has_blank_char lines then
+    raise (Types.Format_error "Map has no blank tile. Blank value must be 0.")
+  else
+    ()
+
 (** [map_maker s] reads the maps from [s], splits it and recovers the puzzle
     while making some sanity assertions on the nature of the puzzle *)
 let map_maker s : Types.npuzzle =
+  (* make a list of string lines *)
   let lines = String.split_on_char '\n' s in
+  (* remove comments *)
   let lines =
     List.fold_left
       (fun lines line ->
@@ -172,12 +169,28 @@ let map_maker s : Types.npuzzle =
             new_line :: lines )
       [] lines
   in
+  (* lines are reversed because of fold, so rev again *)
   let lines = List.rev lines in
+  (* int list list *)
   let lines =
     List.map
       (fun line ->
+        (* separate each integer element in each string to provide a int list list *)
         let words = String.split_on_char ' ' (String.trim line) in
-        List.map int_of_string words )
+        List.fold_left
+          (fun acc el ->
+            match el with
+            | "" -> acc
+            | integer_or_something_else -> (
+              match int_of_string_opt integer_or_something_else with
+              | None ->
+                Format.fprintf Format.std_formatter
+                  "\027[31mUnknown token detected, ignoring. (%s)\027[0m@."
+                  integer_or_something_else;
+                acc
+              | Some integer -> integer :: acc ) )
+          [] words
+        |> List.rev )
       lines
   in
   let size, lines =
@@ -185,10 +198,7 @@ let map_maker s : Types.npuzzle =
     | [] -> failwith "empty"
     | size :: lines -> (List.hd size, lines)
   in
-  assert (List.length lines = size);
-  assert (List.for_all (fun line -> List.length line = size) lines);
-  assert (no_duplicate_values lines);
-  assert (has_blank_char lines);
+  sanitize size lines;
   (size, map_of_lists lines)
 
 (** [get_inversions values] returns a tuple (inversions:int list *

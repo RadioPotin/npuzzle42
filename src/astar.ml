@@ -108,7 +108,7 @@ let astar seen_states size state score =
   let map = Saucisse.empty in
   let map = Saucisse.push (state, 0, None) (score 0 state) map in
 
-  let rec expand total_opened max map acc =
+  let rec expand maxnb_of_states size_of_map map expansion_path_length =
     (* take_max pops the state with the highest heuristic score out the map
      * This does not take into account the sequentiallity of steps,
      * we use the Hashtbl to trace that *)
@@ -120,8 +120,8 @@ let astar seen_states size state score =
         (* If so,
          * add goal state to explored path
          * add goal state to the table of states we have seen *)
-        let acc = s :: acc in
         Hashtbl.replace seen_states state parent;
+        let total_opened = Hashtbl.length seen_states in
 
         (* Return all fruits of the search:
          * 1. expansion path in order of exploration
@@ -129,7 +129,7 @@ let astar seen_states size state score =
          * 2. total number of opened states
          * 3. depth of the search, number of steps for solving puzzle
          * 4. maximum number of states represented at the same time *)
-        (acc, total_opened, depth, max)
+        (s, total_opened, depth, maxnb_of_states, expansion_path_length)
       end else (
         (* If not,
          * Mark state as seen and expand it.
@@ -153,27 +153,27 @@ let astar seen_states size state score =
           List.fold_left
             (fun map child ->
               let chair = (child, depth + 1, Some state) in
+
               (* Push add a binding to the map KEY:VALUE as follows:
                * HEURISTIC_SCORE:(STATE, DEPTH, PARENT STATE OPTION) *)
               Saucisse.push chair (score (depth + 1) child) map )
             map2 children
         in
 
-        (* Total is accumulated over the search to keep track of how many states we
-         * have had in our `opened` state *)
-        let total = total_opened + List.length children in
-        let max =
-          if total > max then
-            total
+        let size_of_map = List.length children + size_of_map in
+        let closed_set_size = Hashtbl.length seen_states in
+        let maxnb_of_states =
+          if maxnb_of_states > size_of_map + closed_set_size then
+            maxnb_of_states
           else
-            max
+            size_of_map + closed_set_size
         in
-        expand total max map (s :: acc)
+        expand maxnb_of_states size_of_map map (expansion_path_length + 1)
       )
   in
-  (* function to extract from our goal state a list of parent states up to the very first state of the search *)
-  let trace_back_path_to_goal path =
-    let child, _depth, parent = List.hd path in
+  (* function to extract from our goal state a list of parent states up
+   * to the very first state of the search *)
+  let trace_back_path_from_goal (child, _, parent) =
     let rec trace_back acc child opt_parent_of_child =
       match opt_parent_of_child with
       | None -> child :: acc
@@ -184,14 +184,17 @@ let astar seen_states size state score =
     trace_back [] child parent
   in
   (* Recursively search the puzzle starting with the initial state in the map *)
-  let reversed_expansion_path, total_opened, depth, max = expand 0 0 map [] in
+  let goal_node, total_opened, depth, maxnb_of_states, expansion_path_length =
+    expand 1 1 map 0
+  in
   (* Backtrace the expansion path from goal state in order to extract a list of
    * effective steps from start to end *)
-  let actual_path = trace_back_path_to_goal reversed_expansion_path in
+  let actual_path = trace_back_path_from_goal goal_node in
   (* Print sequence of steps from initial state to goal state *)
   let rec print_path = function
     | [] -> ()
-    | [ state ] -> Pp.final state total_opened depth max
+    | [ state ] ->
+      Pp.final state total_opened depth maxnb_of_states expansion_path_length
     | state :: r ->
       Pp.state state;
       print_path r
@@ -202,7 +205,7 @@ let astar seen_states size state score =
     heuristic, size and initial state. *)
 let solve_with heuristic size initial_state =
   let seen_states = Hashtbl.create 512 in
-  let solving = Format.sprintf "Solving... " in
+  let solving = Format.sprintf "Solving... @." in
   let be_patient =
     Format.sprintf "This could take a moment, please be patient...@."
   in

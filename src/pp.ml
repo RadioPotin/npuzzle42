@@ -132,27 +132,24 @@ let map fmt puzzle =
     ~pp_sep:(fun fmt () -> Format.fprintf fmt "@\n")
     pp_line fmt puzzle
 
-(** [heuristep map_of_puzzles] Function mainly used for debugging of heuristic
-    results throughout the search. *)
-let heuristep map_of_puzzles =
-  Format.fprintf Format.std_formatter "@[<hov2>%a@]@.@."
-    (Utils.Saucisse.pp (fun fmt (v, k) ->
-         Format.fprintf fmt "DEPTH: %d@\n@[<hov 2>OPENED STATES:@\n%a@]@\n" k
-           map v ) )
-    map_of_puzzles
-
 (** [state state] debugging function to print each state expanded during the
     search. *)
 let state state = Format.fprintf Format.std_formatter "%a@\n@\n" map state
 
 (** [final state total_opened depth] Pretty prints the result of the search with
     all relevant information. *)
-let final state total_opened depth max =
+let final state total_opened depth max expansion_path_length =
   let goal_reached = Format.sprintf "Goal reached!@." in
-  let total_number = Format.sprintf "Total number of opened states:" in
-  let steps = Format.sprintf "Number of moves it took us   :" in
-  let maximum_states = Format.sprintf "Max number of states in mem  :" in
-  Format.fprintf Format.std_formatter "%a@\n%a@\n%a %d@\n%a %d@\n%a %d@\n" map
-    state colour_wrap (5, goal_reached) colour_wrap (4, total_number)
-    total_opened colour_wrap (4, steps) depth colour_wrap (4, maximum_states)
-    max
+  let total_number =
+    Format.sprintf "Total number of states selected from the opened set:"
+  in
+  let steps = Format.sprintf "Number of moves it took us:" in
+  let maximum_states =
+    Format.sprintf "Max number of states allocated in memory:"
+  in
+  let expansion_path = Format.sprintf "Search explored a path of length:" in
+  Format.fprintf Format.std_formatter
+    "%a@\n%a@\n%a %#d@\n%a %#d@\n%a %#d@\n%a %#d@\n" map state colour_wrap
+    (5, goal_reached) colour_wrap (4, steps) depth colour_wrap
+    (4, expansion_path) expansion_path_length colour_wrap (4, maximum_states)
+    max colour_wrap (4, total_number) total_opened
