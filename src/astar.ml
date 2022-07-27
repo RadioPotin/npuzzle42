@@ -120,15 +120,17 @@ let astar seen_states size state score =
         (* If so,
          * add goal state to explored path
          * add goal state to the table of states we have seen *)
-        Hashtbl.replace seen_states state parent;
+        Hashtbl.add seen_states state parent;
         let total_opened = Hashtbl.length seen_states in
 
         (* Return all fruits of the search:
-         * 1. expansion path in order of exploration
-         *      (reversed, since the goal will be the first element of that list)
-         * 2. total number of opened states
+         * 1. goal state, to allow recursive traceback from information contained in the Hashtbl
+         * 2. total number of opened states selected for the search(IE, number of closed states in the Hashtbl)
          * 3. depth of the search, number of steps for solving puzzle
-         * 4. maximum number of states represented at the same time *)
+         * 4. maximum number of states represented at the same time
+         *    (IE, maxnumber = Size_of_map at any given time + size of close set at any given time)
+         * 5. length of the path explored by the search, wrong directions included
+         * *)
         (s, total_opened, depth, maxnb_of_states, expansion_path_length)
       end else (
         (* If not,
@@ -137,7 +139,7 @@ let astar seen_states size state score =
          *        in order of heuristic score
          * NB: We pair a given state to it parent one for later
          *     use in the backtracing of the search from goal state to initial state *)
-        Hashtbl.replace seen_states state parent;
+        Hashtbl.add seen_states state parent;
 
         (* Get all children from a given state we poped off the priority queue *)
         let children = get_children size state in
@@ -160,15 +162,17 @@ let astar seen_states size state score =
             map2 children
         in
 
-        let size_of_map = List.length children + size_of_map in
         let closed_set_size = Hashtbl.length seen_states in
+        let possible_newmax =
+          List.length children + size_of_map + closed_set_size
+        in
         let maxnb_of_states =
-          if maxnb_of_states > size_of_map + closed_set_size then
+          if maxnb_of_states > possible_newmax then
             maxnb_of_states
           else
-            size_of_map + closed_set_size
+            possible_newmax
         in
-        expand maxnb_of_states size_of_map map (expansion_path_length + 1)
+        expand maxnb_of_states (size_of_map - 1) map (expansion_path_length + 1)
       )
   in
   (* function to extract from our goal state a list of parent states up
@@ -185,7 +189,7 @@ let astar seen_states size state score =
   in
   (* Recursively search the puzzle starting with the initial state in the map *)
   let goal_node, total_opened, depth, maxnb_of_states, expansion_path_length =
-    expand 1 1 map 0
+    expand 1 1 map 1
   in
   (* Backtrace the expansion path from goal state in order to extract a list of
    * effective steps from start to end *)

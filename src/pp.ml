@@ -61,7 +61,8 @@ let colour_value fmt value =
     pretty-print the string passed as argument with the colour passed as
     argument in the tuple parameter. *)
 let colour_wrap fmt (colour, s) =
-  Format.fprintf fmt "%a%s%a" colour_prefix colour s colour_suffix ()
+  Format.fprintf fmt "%a%s%a%a" colour_prefix colour s colour_suffix ()
+    Format.pp_print_flush ()
 
 let not_solvable () =
   let s = Format.sprintf "ERROR: Your map is unsolvable! >:C" in
@@ -139,17 +140,21 @@ let state state = Format.fprintf Format.std_formatter "%a@\n@\n" map state
 (** [final state total_opened depth] Pretty prints the result of the search with
     all relevant information. *)
 let final state total_opened depth max expansion_path_length =
-  let goal_reached = Format.sprintf "Goal reached!@." in
+  let goal_reached = Format.sprintf "@\nGoal reached!@." in
   let total_number =
-    Format.sprintf "Total number of states selected from the opened set:"
+    Format.sprintf "Number of closed states at the end of the search:"
   in
   let steps = Format.sprintf "Number of moves it took us:" in
   let maximum_states =
     Format.sprintf "Max number of states allocated in memory:"
   in
-  let expansion_path = Format.sprintf "Search explored a path of length:" in
+  let expansion_path =
+    Format.sprintf
+      "Total number of states ever selected from opened-set (length of \
+       expansion path):"
+  in
   Format.fprintf Format.std_formatter
     "%a@\n%a@\n%a %#d@\n%a %#d@\n%a %#d@\n%a %#d@\n" map state colour_wrap
     (5, goal_reached) colour_wrap (4, steps) depth colour_wrap
-    (4, expansion_path) expansion_path_length colour_wrap (4, maximum_states)
-    max colour_wrap (4, total_number) total_opened
+    (4, maximum_states) max colour_wrap (4, total_number) total_opened
+    colour_wrap (4, expansion_path) expansion_path_length

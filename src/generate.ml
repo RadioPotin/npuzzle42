@@ -1,7 +1,7 @@
 let () = Random.self_init ()
 
 let rec size () =
-  match Random.int 6 with
+  match Random.int 5 with
   | 0
   | 1 ->
     size ()
@@ -30,7 +30,5 @@ let rec gen () =
     gen ()
 
 let goal size =
-  Immut_array.init size
-      (fun j ->
-        Immut_array.init size
-          (fun i -> i + j * size ))
+  Immut_array.init size (fun j ->
+      Immut_array.init size (fun i -> i + (j * size)) )
