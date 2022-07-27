@@ -120,7 +120,7 @@ let astar seen_states size state score =
         (* If so,
          * add goal state to explored path
          * add goal state to the table of states we have seen *)
-        Hashtbl.add seen_states state parent;
+        Hashtbl.replace seen_states state parent;
         let total_opened = Hashtbl.length seen_states in
 
         (* Return all fruits of the search:
@@ -139,7 +139,7 @@ let astar seen_states size state score =
          *        in order of heuristic score
          * NB: We pair a given state to it parent one for later
          *     use in the backtracing of the search from goal state to initial state *)
-        Hashtbl.add seen_states state parent;
+        Hashtbl.replace seen_states state parent;
 
         (* Get all children from a given state we poped off the priority queue *)
         let children = get_children size state in
@@ -163,16 +163,16 @@ let astar seen_states size state score =
         in
 
         let closed_set_size = Hashtbl.length seen_states in
-        let possible_newmax =
-          List.length children + size_of_map + closed_set_size
-        in
+        let children = List.length children in
+        let possible_newmax = children + size_of_map + closed_set_size in
         let maxnb_of_states =
           if maxnb_of_states > possible_newmax then
             maxnb_of_states
           else
             possible_newmax
         in
-        expand maxnb_of_states (size_of_map - 1) map (expansion_path_length + 1)
+        expand maxnb_of_states (children + size_of_map) map
+          (expansion_path_length + 1)
       )
   in
   (* function to extract from our goal state a list of parent states up
